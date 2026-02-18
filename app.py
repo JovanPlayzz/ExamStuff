@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import os
 
-# --- LOGIC FUNCTIONS (Java & .NET) ---
+# --- LOGIC FUNCTIONS (Keep these as they are) ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -26,87 +26,80 @@ def process_net(n):
 st.set_page_config(page_title="Logic Processor", layout="centered")
 
 st.title("📱 Logic Processor")
-st.markdown("Automated result generation for Core and Ryzen sections. Select your details below to preview and download results.")
-st.divider()
+st.caption("Automated results for Core & Ryzen sections.")
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
-    st.error(f"❌ '{input_file}' not found in GitHub!")
+    st.error(f"❌ '{input_file}' not found!")
 else:
-    # --- NEW: STUDENT NUMBER LOOKUP EXPANDER ---
-    with st.expander("Don't know student number? Click here"):
-        tab_core, tab_ryzen = st.tabs(["Core Section", "Ryzen Section"])
-        
-        with tab_core:
-            core_names = pd.read_excel(input_file, sheet_name="Core", header=None, engine='openpyxl')
-            core_names.columns = ["ID", "Name"]
-            st.dataframe(core_names, hide_index=True, use_container_width=True)
-            
-        with tab_ryzen:
-            ryzen_names = pd.read_excel(input_file, sheet_name="Ryzen", header=None, engine='openpyxl')
-            ryzen_names.columns = ["ID", "Name"]
-            st.dataframe(ryzen_names, hide_index=True, use_container_width=True)
+    # 1. Main Inputs
+    section_choice = st.selectbox("Section", ["Core", "Ryzen"])
+    student_num = st.number_input("Student Number", min_value=1, step=1)
 
-    # --- MAIN INPUTS ---
-    section_choice = st.selectbox("Select Section", ["Core", "Ryzen"])
-    student_num = st.number_input("Enter Student Number", min_value=1, value=1)
-    logic_choice = st.radio("Select Logic", ["Java", ".NET"], horizontal=True)
+    # --- COMPACT LOOKUP (Placed Under Student Number) ---
+    with st.expander("🔍 Find my number", expanded=False):
+        # Read names once
+        lookup_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
+        lookup_df.columns = ["ID", "Name"]
+        
+        # Mini search bar
+        search_query = st.text_input("Search name...", placeholder="Enter name").lower()
+        
+        if search_query:
+            filtered = lookup_df[lookup_df['Name'].str.lower().str.contains(search_query)]
+            st.dataframe(filtered, hide_index=True, height=150)
+        else:
+            # Show small version of the full list
+            st.dataframe(lookup_df, hide_index=True, height=150)
+
+    logic_choice = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
     try:
-        # 1. Name Lookup
+        # 2. Name Lookup
         names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         student_row = names_df[names_df[0] == student_num]
         
-        if student_row.empty:
-            st.warning(f"Student {student_num} not found in {section_choice}.")
-        else:
+        if not student_row.empty:
             student_name = str(student_row.iloc[0, 1]).strip()
-            st.success(f"✅ Selected: **{student_name}**")
+            st.success(f"✅ **{student_name}**")
 
-            # 2. Data Extraction & Full Calculation
+            # 3. Calculation Logic
             lower = ((student_num - 1) // 10) * 10 + 1
-            upper = lower + 9
-            data_tab = f"Student {lower} to {upper}"
-            
+            data_tab = f"Student {lower} to {lower + 9}"
             full_df = pd.read_excel(input_file, sheet_name=data_tab, header=None, engine='openpyxl')
+            
             pos_in_tab = (student_num - 1) % 10 
             start_col = (pos_in_tab * 6) + 1
-            end_col = start_col + 5
-
+            
             all_results = []
             for i in range(len(full_df)):
                 if len(all_results) >= 100: break
-                raw_row = full_df.iloc[i, start_col:end_col].tolist()
+                raw_row = full_df.iloc[i, start_col:start_col+5].tolist()
                 try:
                     nums = [int(float(str(v).strip())) for v in raw_row]
                     all_results.append(process_java(nums) if logic_choice == "Java" else process_net(nums))
                 except: continue
 
-            final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3'])
+            final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
             final_df.index = final_df.index + 1
-            final_df = final_df.astype(int)
 
-            # --- ACTION BUTTON ---
-            logic_label = "Java" if logic_choice == "Java" else "Net"
-            filename = f"[{student_num}] {student_name} - {logic_label}.xlsx"
-            
+            # 4. Download Button
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
             st.download_button(
-                label=f"📥 Download Excel for {student_name}",
+                label="📥 Download Excel",
                 data=output.getvalue(),
-                file_name=filename,
+                file_name=f"[{student_num}] {student_name}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
                 type="primary"
             )
 
-            # --- PREVIEW ---
-            st.subheader("📊 Full Results Preview")
-            st.dataframe(final_df, height=400, use_container_width=True)
+            # 5. Full Preview (Limited height for mobile)
+            st.dataframe(final_df, height=300, use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Waiting for valid ID...")
