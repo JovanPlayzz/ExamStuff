@@ -1,17 +1,17 @@
-import streamlit as st
-import pandas as pd
+import hashlib
 import io
 import os
-import hashlib
+import pandas as pd
+import streamlit as st
 
 # --- 1. SECURITY VAULT ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
     GCASH_NUMBER = "09924649443" 
-    FB_LINK = "https://www.facebook.com/your.profile.name" 
+    FB_LINK = "https://www.facebook.com/your.profile.name" # Replace with your link
 except:
-    st.error("Secrets missing! Set SALT_VIEW and SALT_DOWNLOAD in Dashboard.")
+    st.error("Secrets missing in Streamlit Dashboard!")
     st.stop()
 
 def generate_key(student_id, salt):
@@ -45,14 +45,22 @@ def select_id(new_id):
 st.set_page_config(page_title="Answerinator PRO", layout="centered")
 st.title("🚀 Java & Net Answerinator [PRO]")
 st.markdown("*Dont know the answers? just use this! it answers for you because your stupid.*")
-st.divider()
 
-# --- THE SCARY DISCLAIMER ---
+# --- VISIBLE SCARY DISCLAIMER ---
 st.error("""
-### ⚠️ EXTREME DISCLAIMER:
-**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS.**
-**USE AT YOUR OWN RISK.**
+**⚠️ EXTREME DISCLAIMER:**
+**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.**
 """, icon="🚫")
+
+# --- HIDDEN MESSAGE FOR SIR ---
+with st.expander("Message for Sir Pids"):
+    st.info("""
+    Sir, I know we haven't learned Python yet, but I wanted to challenge myself to see if I could turn our class logic into a real website. 
+    I made this because I know some of my classmates are struggling and really need the extra help to understand the outputs. 
+    It was just a coding experiment for me. Please have mercy!
+    """, icon="👨‍🏫")
+
+st.divider()
 
 if 's_num' not in st.session_state: st.session_state.s_num = 1
 
@@ -67,7 +75,7 @@ else:
     with st.expander("🔍 Find my number"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
         ldf.columns = ["ID", "Name"]
-        query = st.text_input("Type name to search...", key="search_box").lower()
+        query = st.text_input("Type name...", key="search_box").lower()
         if query:
             match = ldf[ldf['Name'].astype(str).str.lower().str.contains(query, na=False)]
             for _, row in match.head(5).iterrows():
@@ -75,12 +83,13 @@ else:
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
+    # NAME DISPLAY
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
         if not student_match.empty:
             student_name = str(student_match.iloc[0, 1]).strip()
-            st.success(f"📍 **Currently Selected:** Student #{s_num} - {student_name}")
+            st.success(f"📍 **Selected:** Student #{s_num} - {student_name}")
     except: pass
 
     logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
@@ -93,7 +102,7 @@ else:
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    # Correct Keys
+    # Validation
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
     is_view = (user_key == correct_view_key)
@@ -122,7 +131,7 @@ else:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
-                    st.download_button("📥 Download Excel File", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                    st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                 else:
                     st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
 
