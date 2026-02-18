@@ -48,9 +48,9 @@ st.markdown("*Dont know the answers? just use this! it answers for you because y
 
 # --- VISIBLE SCARY DISCLAIMER ---
 st.error("""
-**⚠️ EXTREME DISCLAIMER:**
-**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK. (Just use an AI or do it yourself if you dont want to pay lol)**
-""", icon="🚫")
+**EXTREME DISCLAIMER:**
+**IF THE ANSWERS YOU SUBMIT IN THE EXAMS ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK. (Just use an AI or do it yourself if you dont want to pay lol)**
+""", icon="‼️")
 
 # --- HIDDEN MESSAGE FOR SIR ---
 with st.expander("Message for Sir Pids if he sees this"):
