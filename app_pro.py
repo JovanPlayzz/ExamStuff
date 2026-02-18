@@ -4,17 +4,17 @@ import io
 import os
 import hashlib
 
-# --- 1. THE SECURITY VAULT ---
+# --- 1. SECURITY VAULT ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
-    GCASH_NUMBER = st.secrets["GCASH_NUMBER"]
+    # GCASH_NUMBER is now fixed as requested
+    GCASH_NUMBER = "09924649443" 
 except:
     st.error("Secrets missing! Set SALT_VIEW and SALT_DOWNLOAD in Dashboard.")
     st.stop()
 
 def generate_key(student_id, salt):
-    """Generates a unique 6-digit hash based on the specific salt provided."""
     combined = f"{student_id}{salt}"
     hash_hex = hashlib.sha256(combined.encode()).hexdigest()
     return str(int(hash_hex[:8], 16))[:6]
@@ -71,14 +71,23 @@ else:
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- 4. DOUBLE HASH PAYWALL ---
+    # --- 4. FANCY PAYWALL ---
     st.divider()
-    st.subheader("💰 Unlock Answers")
-    st.info(f"🔹 **₱200**: View Key\n🔹 **₱250**: Download Key\n\nGCash: **{GCASH_NUMBER}**")
+    st.markdown(f"""
+    ### 💸 Premium Access
+    | Option | Price | Features |
+    | :--- | :--- | :--- |
+    | **View Key** | ₱200 | Online Table Access |
+    | **Full Key** | ₱250 | Online Table + Excel Download |
+    
+    **GCash:** `{GCASH_NUMBER}`
+    
+    *Send receipt + Student #{s_num} to get your key.*
+    """, unsafe_allow_html=True)
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    # Calculate both possible correct hashes
+    # Correct Keys
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
 
@@ -101,13 +110,15 @@ else:
                 
                 results = []
                 for _, r in raw_vars.iterrows():
-                    clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
-                    if len(clean_r) == 5:
-                        results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
+                    try:
+                        clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
+                        if len(clean_r) == 5:
+                            results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
+                    except: continue
                     if len(results) >= 100: break
                 
                 if results:
-                    # RENDER DOWNLOAD (Only for DL Key)
+                    # --- DOWNLOAD SECTION ---
                     if is_dl:
                         file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
                         output = io.BytesIO()
@@ -115,9 +126,11 @@ else:
                             pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
                         st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                     else:
-                        st.warning("💡 View-Only. Send ₱50 more for the Download Key.")
+                        # GREYED OUT BUTTON (Disabled)
+                        st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
+                        st.info("💡 Enter the **Full Key** to enable the download button.")
 
-                    # RENDER TABLE (For both)
+                    # --- TABLE ---
                     st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
         except: st.error("Data error.")
     elif user_key != "":
