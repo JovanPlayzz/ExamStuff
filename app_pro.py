@@ -9,7 +9,7 @@ try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
     GCASH_NUMBER = "09924649443" 
-    FB_LINK = "https://www.facebook.com/your.profile.name" # Replace with your link
+    FB_LINK = "https://www.facebook.com/share/1F1KiErppH/?mibextid=wwXIfr" # Replace with your link
 except:
     st.error("Secrets missing in Streamlit Dashboard!")
     st.stop()
