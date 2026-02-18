@@ -5,19 +5,18 @@ import os
 import hashlib
 
 # --- 1. THE SECURITY VAULT ---
-# The salt is now pulled from Streamlit's hidden environment variables
 try:
-    SECRET_SALT = st.secrets["SECRET_SALT"]
+    SALT_VIEW = st.secrets["SALT_VIEW"]
+    SALT_DL = st.secrets["SALT_DOWNLOAD"]
     GCASH_NUMBER = st.secrets["GCASH_NUMBER"]
 except:
-    st.error("Secrets not configured! Admin must set SECRET_SALT and GCASH_NUMBER.")
+    st.error("Secrets missing! Set SALT_VIEW and SALT_DOWNLOAD in Dashboard.")
     st.stop()
 
-def generate_secure_key(student_id):
-    """Generates an unguessable 6-digit key based on Student ID and Salt."""
-    combined = f"{student_id}{SECRET_SALT}"
-    hash_object = hashlib.sha256(combined.encode())
-    hash_hex = hash_object.hexdigest()
+def generate_key(student_id, salt):
+    """Generates a unique 6-digit hash based on the specific salt provided."""
+    combined = f"{student_id}{salt}"
+    hash_hex = hashlib.sha256(combined.encode()).hexdigest()
     return str(int(hash_hex[:8], 16))[:6]
 
 # --- 2. LOGIC FUNCTIONS ---
@@ -54,6 +53,7 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
+    # Inputs & Search
     col1, col2 = st.columns(2)
     with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
@@ -71,16 +71,25 @@ else:
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- 4. PAYWALL ---
+    # --- 4. DOUBLE HASH PAYWALL ---
     st.divider()
     st.subheader("💰 Unlock Answers")
-    st.info(f"Send **₱250** to **{GCASH_NUMBER}**. Send receipt + Student #{s_num} to get your unique key.")
+    st.info(f"🔹 **₱200**: View Key\n🔹 **₱250**: Download Key\n\nGCash: **{GCASH_NUMBER}**")
     
-    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password")
+    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    if user_key == generate_secure_key(s_num):
-        st.success(f"🔓 Access Granted for Student {s_num}!")
+    # Calculate both possible correct hashes
+    correct_view_key = generate_key(s_num, SALT_VIEW)
+    correct_dl_key = generate_key(s_num, SALT_DL)
+
+    # Access Logic
+    is_view = (user_key == correct_view_key)
+    is_dl = (user_key == correct_dl_key)
+
+    if is_view or is_dl:
+        st.success(f"🔓 Access Granted!")
         try:
+            # Data Processing
             names_df = pd.read_excel(input_file, sheet_name=section, header=None)
             student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
             if not student_match.empty:
@@ -92,20 +101,23 @@ else:
                 
                 results = []
                 for _, r in raw_vars.iterrows():
-                    try:
-                        clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
-                        if len(clean_r) == 5:
-                            results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
-                    except: continue
+                    clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
+                    if len(clean_r) == 5:
+                        results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                     if len(results) >= 100: break
                 
                 if results:
-                    file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
-                    
-                    st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                    # RENDER DOWNLOAD (Only for DL Key)
+                    if is_dl:
+                        file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                            pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
+                        st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                    else:
+                        st.warning("💡 View-Only. Send ₱50 more for the Download Key.")
+
+                    # RENDER TABLE (For both)
                     st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
         except: st.error("Data error.")
     elif user_key != "":
