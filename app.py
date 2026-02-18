@@ -24,8 +24,11 @@ def process_net(n):
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
-
 st.title("📱 Logic Processor")
+
+# Initialize Session State for the Student Number
+if 's_num' not in st.session_state:
+    st.session_state.s_num = 1
 
 input_file = 'variables.xlsx'
 
@@ -34,26 +37,40 @@ if not os.path.exists(input_file):
 else:
     # 1. Main Inputs
     section_choice = st.selectbox("Section", ["Core", "Ryzen"])
-    student_num = st.number_input("Student Number", min_value=1, step=1)
+    
+    # Student number input linked to session state
+    student_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
-    # --- CLEAN LOOKUP (No eyeball icons) ---
+    # --- INTERACTIVE LOOKUP ---
     with st.expander("🔍 Find my number", expanded=False):
-        search_query = st.text_input("Type name to search...", placeholder="e.g. Juan").lower()
+        # We use a key for the search bar to clear it easily
+        search_query = st.text_input("Type name to search...", placeholder="e.g. Juan", key="search_input").lower()
         
         lookup_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         lookup_df.columns = ["ID", "Name"]
         
         if search_query:
             filtered = lookup_df[lookup_df['Name'].str.lower().str.contains(search_query)]
-            # Using st.table removes all the hover icons/toolbars
-            st.table(filtered.head(10)) 
+            
+            if not filtered.empty:
+                # Create a clean row for each result with a "Pick" button
+                for _, row in filtered.head(5).iterrows():
+                    cols = st.columns([3, 1])
+                    cols[0].write(f"**{row['ID']}** - {row['Name']}")
+                    # If button is clicked, update session state and rerun
+                    if cols[1].button("Pick", key=f"btn_{row['ID']}"):
+                        st.session_state.s_num = int(row['ID'])
+                        st.session_state.search_input = "" # Resets search to nothing
+                        st.rerun() 
+            else:
+                st.caption("No matches found.")
         else:
-            st.caption("Enter a name above to see your ID.")
+            st.caption("Enter a name to find your ID.")
 
     logic_choice = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
     try:
-        # 2. Name Lookup
+        # 2. Name Lookup & Processing
         names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         student_row = names_df[names_df[0] == student_num]
         
@@ -61,7 +78,7 @@ else:
             student_name = str(student_row.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
-            # 3. Calculation Logic
+            # 3. Calculation
             lower = ((student_num - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
             full_df = pd.read_excel(input_file, sheet_name=data_tab, header=None, engine='openpyxl')
@@ -81,7 +98,7 @@ else:
             final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
             final_df.index = final_df.index + 1
 
-            # 4. Download Button
+            # 4. Download
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 final_df.to_excel(writer, index_label='#', sheet_name='Results')
@@ -95,8 +112,6 @@ else:
                 type="primary"
             )
 
-            # 5. Result Display (Keeping it simple)
             st.dataframe(final_df, height=300, use_container_width=True)
-
     except Exception:
-        st.info("Enter valid details to see results.")
+        st.info("Select a student to generate results.")
