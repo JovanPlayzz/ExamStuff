@@ -37,7 +37,7 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- ROW 1: INPUTS ---
+    # --- INPUTS ---
     col1, col2 = st.columns(2)
     with col1:
         section = st.selectbox("Section", ["Core", "Ryzen"])
@@ -47,7 +47,6 @@ else:
     # --- SEARCH ---
     with st.expander("🔍 Find my number"):
         query = st.text_input("Type name...", placeholder="Search...", key="search_box").lower()
-        
         lookup_df = pd.read_excel(input_file, sheet_name=section, header=None)
         lookup_df.columns = ["ID", "Name"]
         
@@ -60,51 +59,53 @@ else:
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- DYNAMIC DATA PROCESSING ---
+    # --- PROCESSING ---
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         names_df[0] = pd.to_numeric(names_df[0], errors='coerce')
         student_match = names_df[names_df[0] == s_num]
         
-        if student_match.empty:
-            st.warning("Student ID not found in this section.")
-        else:
+        if not student_match.empty:
             student_name = str(student_match.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
+            # Tab logic
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
-            
             df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
-            start_col = ((int(s_num) - 1) % 10 * 6) + 1
             
+            start_col = ((int(s_num) - 1) % 10 * 6) + 1
             raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
+            
             results = []
             for r in raw_data:
                 clean_r = [int(float(v)) for v in r if str(v).replace('.','',1).isdigit()]
                 if len(clean_r) == 5:
                     results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
 
-            # Table and Download
             if results:
                 final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
                 final_df.index = final_df.index + 1
 
+                # Generate Excel
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
+                # NEW FILENAME FORMAT: Stdntnum: name-Java/Net
+                clean_logic = "Java" if logic == "Java" else "Net"
+                file_label = f"{s_num}: {student_name}-{clean_logic}.xlsx"
+
                 st.download_button(
                     label="📥 Download Excel",
                     data=output.getvalue(),
-                    file_name=f"[{s_num}] {student_name}.xlsx",
+                    file_name=file_label,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True,
                     type="primary"
                 )
                 
-                # CHANGED: Using st.table instead of st.dataframe to remove interactive buttons
+                # Table without hover buttons
                 st.table(final_df)
-
-    except Exception:
-        st.info("Searching for data...")
+    except:
+        st.info("Select a valid ID to display results.")
