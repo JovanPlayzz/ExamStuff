@@ -22,11 +22,10 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
-# --- CALLBACK: UPDATE ID & SHOW ANIMATED TOAST ---
+# --- CALLBACK FOR INSTANT INPUT ---
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
-    # This creates the green animated pop-up at the bottom center
-    st.toast("Inputted successfully!", icon="✅")
+    st.toast(f"✅ Inputted successfully: ID {new_id}", icon="🚀")
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
@@ -45,8 +44,8 @@ else:
     with col1:
         section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2:
-        # Added max_value=40 to prevent over-inputting
-        s_num = st.number_input("Student Number", min_value=1, max_value=40, step=1, key="s_num")
+        # Linked to session state key for instant updates
+        s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
     # --- SEARCH DROPDOWN ---
     with st.expander("🔍 Find my number"):
@@ -57,53 +56,48 @@ else:
         
         if query:
             match = lookup_df[lookup_df['Name'].str.lower().str.contains(query, na=False)]
-            # Filter to only show IDs up to 40
-            match = match[match['ID'] <= 40]
-            
             for _, row in match.head(5).iterrows():
                 c1, c2 = st.columns([3, 1])
                 c1.write(f"`{row['ID']}` {row['Name']}")
+                # The "Pick" button now inputs the value directly
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- INPUT VALIDATION & PROCESSING ---
-    if s_num > 40:
-        st.warning("⚠️ ID limit reached. Please enter a number between 1 and 40.")
-    else:
-        try:
-            names_df = pd.read_excel(input_file, sheet_name=section, header=None)
-            student_name = names_df[names_df[0] == s_num].iloc[0, 1]
-            st.success(f"✅ **{student_name}**")
+    # --- PROCESSING ---
+    try:
+        names_df = pd.read_excel(input_file, sheet_name=section, header=None)
+        student_name = names_df[names_df[0] == st.session_state.s_num].iloc[0, 1]
+        st.success(f"✅ **{student_name}**")
 
-            # Logic selection and data extraction
-            lower = ((s_num - 1) // 10) * 10 + 1
-            data_tab = f"Student {lower} to {lower + 9}"
-            df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
-            
-            start_col = ((s_num - 1) % 10 * 6) + 1
-            raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
+        # Range extraction
+        lower = ((st.session_state.s_num - 1) // 10) * 10 + 1
+        data_tab = f"Student {lower} to {lower + 9}"
+        df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
+        
+        start_col = ((st.session_state.s_num - 1) % 10 * 6) + 1
+        raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
 
-            results = [process_java(r) if logic == "Java" else process_net(r) for r in raw_data]
-            
-            final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
-            final_df.index = final_df.index + 1
+        results = [process_java(r) if logic == "Java" else process_net(r) for r in raw_data]
+        
+        final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
+        final_df.index = final_df.index + 1
 
-            # Download Button
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                final_df.to_excel(writer, index_label='#', sheet_name='Results')
+        # Download Button
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
-            st.download_button(
-                label=f"📥 Download Excel",
-                data=output.getvalue(),
-                file_name=f"[{s_num}] {student_name}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-                type="primary"
-            )
+        st.download_button(
+            label="📥 Download Result",
+            data=output.getvalue(),
+            file_name=f"[{st.session_state.s_num}] {student_name}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            type="primary"
+        )
 
-            st.dataframe(final_df, height=350, use_container_width=True)
+        st.dataframe(final_df, height=350, use_container_width=True)
 
-        except:
-            st.info("Select a valid ID (1-40) to see results.")
+    except:
+        st.info("Select a valid ID to see results.")
