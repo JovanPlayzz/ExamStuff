@@ -23,8 +23,18 @@ def process_net(n):
     return arr
 
 # --- UI SETUP ---
+# --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
-st.title("📱 Logic Processor")
+
+# Title
+st.title("Java&Net Answerinator")
+
+# Subtext / Description
+st.markdown("""
+lazy? Use this! it basically answers for you
+""")
+
+st.divider() # Adds a clean horizontal line under the explanation
 
 input_file = 'variables.xlsx'
 
