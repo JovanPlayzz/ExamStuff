@@ -49,15 +49,15 @@ st.markdown("*Dont know the answers? just use this! it answers for you because y
 # --- VISIBLE SCARY DISCLAIMER ---
 st.error("""
 **⚠️ EXTREME DISCLAIMER:**
-**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.**
+**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK. (Just use an AI or do it yourself if you dont want to pay lol)**
 """, icon="🚫")
 
 # --- HIDDEN MESSAGE FOR SIR ---
-with st.expander("Message for Sir Pids"):
+with st.expander("Message for Sir Pids if he sees this"):
     st.info("""
-    Sir, I know we haven't learned Python yet, but I wanted to challenge myself to see if I could turn our class logic into a real website. 
-    I made this because I know some of my classmates are struggling and really need the extra help to understand the outputs. 
-    It was just a coding experiment for me. Please have mercy!
+    Hi Sir!
+    Im probably cooked but ive noticed some of my classmates uses chatgpt or gemini anyway, so why not make a much more reliable tool?
+    this app is just a calculator and the students HAS a choice if they wanna pay or nah, its their choice. ik this may be cheating but since the exam is online, everyone is probably using AI to do it anyways.
     """, icon="👨‍🏫")
 
 st.divider()
