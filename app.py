@@ -26,8 +26,12 @@ def select_id(new_id):
     st.session_state.s_num = int(new_id)
 
 # --- UI SETUP ---
-st.set_page_config(page_title="Logic Processor", layout="centered")
-st.title("📱 Logic Processor")
+st.set_page_config(page_title="Answerinator", layout="centered")
+
+# --- NEW HEADER SECTION ---
+st.title("🚀 Java & Net Answerinator")
+st.markdown("*Dont know the answers? just use this! it answers for you because your stupid.*")
+st.divider()
 
 if 's_num' not in st.session_state:
     st.session_state.s_num = 1
@@ -92,7 +96,7 @@ else:
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
-                # NEW FILENAME FORMAT: Stdntnum: name-Java/Net
+                # FILENAME: Stdntnum: name-Java/Net
                 clean_logic = "Java" if logic == "Java" else "Net"
                 file_label = f"{s_num}: {student_name}-{clean_logic}.xlsx"
 
@@ -105,7 +109,7 @@ else:
                     type="primary"
                 )
                 
-                # Table without hover buttons
+                # Static table (no hover buttons)
                 st.table(final_df)
     except:
         st.info("Select a valid ID to display results.")
