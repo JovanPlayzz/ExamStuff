@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import os
 
-# --- LOGIC FUNCTIONS (Keep these as they are) ---
+# --- LOGIC FUNCTIONS ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -26,32 +26,29 @@ def process_net(n):
 st.set_page_config(page_title="Logic Processor", layout="centered")
 
 st.title("📱 Logic Processor")
-st.caption("Automated results for Core & Ryzen sections.")
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
-    st.error(f"❌ '{input_file}' not found!")
+    st.error("❌ File not found!")
 else:
     # 1. Main Inputs
     section_choice = st.selectbox("Section", ["Core", "Ryzen"])
     student_num = st.number_input("Student Number", min_value=1, step=1)
 
-    # --- COMPACT LOOKUP (Placed Under Student Number) ---
+    # --- CLEAN LOOKUP (No eyeball icons) ---
     with st.expander("🔍 Find my number", expanded=False):
-        # Read names once
+        search_query = st.text_input("Type name to search...", placeholder="e.g. Juan").lower()
+        
         lookup_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         lookup_df.columns = ["ID", "Name"]
         
-        # Mini search bar
-        search_query = st.text_input("Search name...", placeholder="Enter name").lower()
-        
         if search_query:
             filtered = lookup_df[lookup_df['Name'].str.lower().str.contains(search_query)]
-            st.dataframe(filtered, hide_index=True, height=150)
+            # Using st.table removes all the hover icons/toolbars
+            st.table(filtered.head(10)) 
         else:
-            # Show small version of the full list
-            st.dataframe(lookup_df, hide_index=True, height=150)
+            st.caption("Enter a name above to see your ID.")
 
     logic_choice = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
@@ -98,8 +95,8 @@ else:
                 type="primary"
             )
 
-            # 5. Full Preview (Limited height for mobile)
+            # 5. Result Display (Keeping it simple)
             st.dataframe(final_df, height=300, use_container_width=True)
 
-    except Exception as e:
-        st.error(f"Waiting for valid ID...")
+    except Exception:
+        st.info("Enter valid details to see results.")
