@@ -23,31 +23,43 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
-# --- CUSTOM BOTTOM NOTIFICATION LOGIC ---
-def show_custom_toast():
-    # This injects a hidden HTML element that triggers a bottom-center popup
+# --- CUSTOM NOTIFICATION UI ---
+def show_custom_notification():
+    # Injects a custom floating notification at the bottom center
     components.html(
         """
-        <div id="toast" style="
+        <div id="notif" style="
             position: fixed; 
-            bottom: 20px; 
+            bottom: 30px; 
             left: 50%; 
             transform: translateX(-50%); 
             background-color: #28a745; 
             color: white; 
-            padding: 12px 24px; 
-            border-radius: 25px; 
-            font-family: sans-serif; 
+            padding: 14px 28px; 
+            border-radius: 50px; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-weight: 500;
             z-index: 9999; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            animation: slideUp 0.5s, fadeOut 0.5s 2.5s forwards;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            animation: popUp 0.4s ease-out, fadeOut 0.5s 2.5s forwards;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
         " onclick="this.style.display='none'">
-            ✅ Inputted successfully!
+            <span style="font-size: 20px;">✅</span> 
+            <span>Inputted successfully!</span>
         </div>
         <style>
-            @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 20px; opacity: 1; } }
-            @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+            @keyframes popUp { 
+                0% { bottom: -60px; opacity: 0; } 
+                100% { bottom: 30px; opacity: 1; } 
+            }
+            @keyframes fadeOut { 
+                0% { opacity: 1; } 
+                100% { opacity: 0; visibility: hidden; } 
+            }
         </style>
         """,
         height=0
@@ -55,26 +67,26 @@ def show_custom_toast():
 
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
-    st.session_state.show_toast = True
+    st.session_state.run_notif = True
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
 st.title("📱 Logic Processor")
 
 if 's_num' not in st.session_state: st.session_state.s_num = 1
-if 'show_toast' not in st.session_state: st.session_state.show_toast = False
+if 'run_notif' not in st.session_state: st.session_state.run_notif = False
 
-# Trigger the custom toast if the flag is set
-if st.session_state.show_toast:
-    show_custom_toast()
-    st.session_state.show_toast = False
+# Trigger custom UI notification
+if st.session_state.run_notif:
+    show_custom_notification()
+    st.session_state.run_notif = False
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- INPUTS ---
+    # --- ROW 1: INPUTS ---
     col1, col2 = st.columns(2)
     with col1:
         section = st.selectbox("Section", ["Core", "Ryzen"])
@@ -96,24 +108,30 @@ else:
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- PROCESSING ---
+    # --- DYNAMIC DATA PROCESSING ---
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         names_df[0] = pd.to_numeric(names_df[0], errors='coerce')
         student_match = names_df[names_df[0] == s_num]
         
-        if not student_match.empty:
+        if student_match.empty:
+            st.warning("Student ID not found in this section.")
+        else:
             student_name = str(student_match.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
+            
             df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
-            
             start_col = ((int(s_num) - 1) % 10 * 6) + 1
-            raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
             
-            results = [process_java(r) if logic == "Java" else process_net(r) for r in raw_data]
+            raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
+            results = []
+            for r in raw_data:
+                clean_r = [int(float(v)) for v in r if str(v).replace('.','',1).isdigit()]
+                if len(clean_r) == 5:
+                    results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
 
             if results:
                 final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
@@ -123,14 +141,9 @@ else:
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
-                st.download_button(
-                    label="📥 Download Excel",
-                    data=output.getvalue(),
-                    file_name=f"[{s_num}] {student_name}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True,
-                    type="primary"
-                )
+                st.download_button(label="📥 Download Excel", data=output.getvalue(),
+                                 file_name=f"[{s_num}] {student_name}.xlsx", use_container_width=True, type="primary")
                 st.dataframe(final_df, height=350, use_container_width=True)
-    except:
+
+    except Exception:
         st.info("Searching for data...")
