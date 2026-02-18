@@ -55,7 +55,7 @@ else:
             match = lookup_df[lookup_df['Name'].astype(str).str.lower().str.contains(query, na=False)]
             for _, row in match.head(5).iterrows():
                 c1, c2 = st.columns([3, 1])
-                c1.write(f"`{row['ID']}` {row['Name']}")
+                c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
@@ -76,23 +76,23 @@ else:
             
             start_col = ((int(s_num) - 1) % 10 * 6) + 1
             
-            # FIXED: Grabbing 101 rows to ensure we get exactly 100 results
+            # Extract 101 rows to ensure we get 100 valid ones
             raw_vars = df.iloc[0:101, start_col:start_col+5]
             
-            rows_list = raw_vars.values.tolist()
+            rows_list = []
             results = []
-            for r in rows_list:
+            
+            for _, r in raw_vars.iterrows():
                 try:
-                    # Filter out empty or non-numeric cells
-                    clean_r = [int(float(v)) for v in r if pd.notna(v)]
+                    # Force conversion to integer and filter out NaNs
+                    clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
                     if len(clean_r) == 5:
+                        rows_list.append(clean_r)
                         results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                 except: continue
-                # Stop exactly at 100
                 if len(results) >= 100: break
 
             if results:
-                # File Export
                 clean_logic = "Java" if logic == "Java" else "Net"
                 file_label = f"{s_num}: {student_name}-{clean_logic}.xlsx"
                 
@@ -102,8 +102,8 @@ else:
 
                 st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                 
-                # Results Table
-                final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
+                # Answers Table (Integer only)
+                final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
                 final_df.index = final_df.index + 1
                 st.table(final_df)
 
@@ -111,7 +111,8 @@ else:
                 st.divider()
                 if st.button("📋 List All Input Variables"):
                     with st.expander("Raw Variables Used", expanded=True):
-                        var_df = pd.DataFrame(rows_list[:len(results)], columns=['V1', 'V2', 'V3', 'V4', 'V5'])
+                        # Force all 5 columns to show clearly
+                        var_df = pd.DataFrame(rows_list, columns=['V1', 'V2', 'V3', 'V4', 'V5']).astype(int)
                         var_df.index = var_df.index + 1
                         st.table(var_df)
 
