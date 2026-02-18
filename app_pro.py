@@ -5,18 +5,19 @@ import os
 import hashlib
 
 # --- 1. THE SECURITY VAULT ---
-# Change this "SALT" to any random string of letters/numbers. 
-# This makes the math impossible to reverse-engineer.
-SECRET_SALT = "Banana99_X_77_Alpha_Bravo" 
-GCASH_NUMBER = "09XX-XXX-XXXX"
+# The salt is now pulled from Streamlit's hidden environment variables
+try:
+    SECRET_SALT = st.secrets["SECRET_SALT"]
+    GCASH_NUMBER = st.secrets["GCASH_NUMBER"]
+except:
+    st.error("Secrets not configured! Admin must set SECRET_SALT and GCASH_NUMBER.")
+    st.stop()
 
 def generate_secure_key(student_id):
     """Generates an unguessable 6-digit key based on Student ID and Salt."""
     combined = f"{student_id}{SECRET_SALT}"
-    # Creates a unique hexadecimal hash
     hash_object = hashlib.sha256(combined.encode())
     hash_hex = hash_object.hexdigest()
-    # Pull 6 digits from the hash and convert to a number string
     return str(int(hash_hex[:8], 16))[:6]
 
 # --- 2. LOGIC FUNCTIONS ---
@@ -77,10 +78,7 @@ else:
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password")
     
-    # Calculate what the key SHOULD be
-    correct_key = generate_secure_key(s_num)
-
-    if user_key == correct_key:
+    if user_key == generate_secure_key(s_num):
         st.success(f"🔓 Access Granted for Student {s_num}!")
         try:
             names_df = pd.read_excel(input_file, sheet_name=section, header=None)
@@ -111,4 +109,4 @@ else:
                     st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
         except: st.error("Data error.")
     elif user_key != "":
-        st.error("❌ That key is not valid for this ID.")
+        st.error("❌ Invalid Key.")
