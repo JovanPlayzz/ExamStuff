@@ -75,19 +75,24 @@ else:
             df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
             
             start_col = ((int(s_num) - 1) % 10 * 6) + 1
-            raw_vars = df.iloc[0:100, start_col:start_col+5]
             
-            # Prepare data for calculation
+            # FIXED: Grabbing 101 rows to ensure we get exactly 100 results
+            raw_vars = df.iloc[0:101, start_col:start_col+5]
+            
             rows_list = raw_vars.values.tolist()
             results = []
             for r in rows_list:
                 try:
-                    clean_r = [int(float(v)) for v in r]
-                    results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
+                    # Filter out empty or non-numeric cells
+                    clean_r = [int(float(v)) for v in r if pd.notna(v)]
+                    if len(clean_r) == 5:
+                        results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                 except: continue
+                # Stop exactly at 100
+                if len(results) >= 100: break
 
             if results:
-                # 1. Action Button (Download)
+                # File Export
                 clean_logic = "Java" if logic == "Java" else "Net"
                 file_label = f"{s_num}: {student_name}-{clean_logic}.xlsx"
                 
@@ -97,17 +102,16 @@ else:
 
                 st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                 
-                # 2. Results Table
+                # Results Table
                 final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
                 final_df.index = final_df.index + 1
                 st.table(final_df)
 
-                # 3. THE NEW VARIABLE LIST BUTTON
+                # Variable List Button
                 st.divider()
                 if st.button("📋 List All Input Variables"):
                     with st.expander("Raw Variables Used", expanded=True):
-                        var_df = raw_vars.copy()
-                        var_df.columns = ['Var 1', 'Var 2', 'Var 3', 'Var 4', 'Var 5']
+                        var_df = pd.DataFrame(rows_list[:len(results)], columns=['V1', 'V2', 'V3', 'V4', 'V5'])
                         var_df.index = var_df.index + 1
                         st.table(var_df)
 
