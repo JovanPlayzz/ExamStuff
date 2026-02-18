@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import io
+import os
 
-# --- LOGIC FUNCTIONS (Keep these exactly as you had them) ---
+# --- LOGIC FUNCTIONS ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -15,8 +16,8 @@ def process_java(n):
 def process_net(n):
     arr = [0, 0, 0]
     for x in range(2, -1, -1):
-        if not (n[0] > x) and not (n[4] < x): arr[x] = n[0] + n[1] + x
-        elif (n[1] >= x) and (n[2] >= x): arr[x] = n[2] + n[4] + x # Simplified logic
+        if (n[0] <= x) and (n[4] >= x): arr[x] = n[0] + n[1] + x
+        elif (n[1] >= x) and (n[2] >= x): arr[x] = n[2] + n[4] + x
         elif (n[3] >= x) or (n[0] >= x): arr[x] = n[0] + n[3] + x
         else: arr[x] = n[1] + n[4] + x
     return arr
@@ -25,31 +26,34 @@ def process_net(n):
 st.set_page_config(page_title="Logic Processor", layout="centered")
 st.title("📱 Logic Processor")
 
-uploaded_file = st.file_uploader("Upload variables.xlsx", type="xlsx")
+# Path to the file already in your GitHub
+input_file = 'variables.xlsx'
 
-if uploaded_file:
+if not os.path.exists(input_file):
+    st.error(f"❌ '{input_file}' not found in GitHub! Please upload it to your repo.")
+else:
     section_choice = st.selectbox("Select Section", ["Core", "Ryzen"])
     student_num = st.number_input("Enter Student Number", min_value=1, value=1)
     logic_choice = st.radio("Select Logic", ["Java", ".NET"])
 
     if st.button("Generate Result", type="primary"):
         try:
-            # 1. Name Lookup
-            names_df = pd.read_excel(uploaded_file, sheet_name=section_choice, header=None)
+            # 1. Name Lookup (engine='openpyxl' is key)
+            names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
             student_row = names_df[names_df[0] == student_num]
             
             if student_row.empty:
                 st.error(f"Student {student_num} not found!")
             else:
                 student_name = str(student_row.iloc[0, 1]).strip()
-                st.success(f"Found: {student_name}")
+                st.success(f"✅ Found: {student_name}")
 
                 # 2. Data Extraction
                 lower = ((student_num - 1) // 10) * 10 + 1
                 upper = lower + 9
                 data_tab = f"Student {lower} to {upper}"
                 
-                df = pd.read_excel(uploaded_file, sheet_name=data_tab, header=None)
+                df = pd.read_excel(input_file, sheet_name=data_tab, header=None, engine='openpyxl')
                 pos_in_tab = (student_num - 1) % 10 
                 start_col = (pos_in_tab * 6) + 1
                 end_col = start_col + 5
@@ -76,7 +80,7 @@ if uploaded_file:
                 filename = f"[{student_num}] {student_name} - {logic_label}.xlsx"
                 
                 st.download_button(
-                    label="📥 Download Result",
+                    label="📥 Download Excel Result",
                     data=output.getvalue(),
                     file_name=filename,
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
