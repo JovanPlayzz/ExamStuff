@@ -8,7 +8,6 @@ import hashlib
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
-    # GCASH_NUMBER is now fixed as requested
     GCASH_NUMBER = "09924649443" 
 except:
     st.error("Secrets missing! Set SALT_VIEW and SALT_DOWNLOAD in Dashboard.")
@@ -53,7 +52,7 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # Inputs & Search
+    # --- STUDENT INPUT SECTION ---
     col1, col2 = st.columns(2)
     with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
@@ -61,7 +60,7 @@ else:
     with st.expander("🔍 Find my number"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
         ldf.columns = ["ID", "Name"]
-        query = st.text_input("Type name...", key="search_box").lower()
+        query = st.text_input("Type name to search...", key="search_box").lower()
         if query:
             match = ldf[ldf['Name'].astype(str).str.lower().str.contains(query, na=False)]
             for _, row in match.head(5).iterrows():
@@ -69,9 +68,22 @@ else:
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
-    logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
+    # --- THE NAME DISPLAY (The part you were looking for!) ---
+    try:
+        names_df = pd.read_excel(input_file, sheet_name=section, header=None)
+        student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
+        if not student_match.empty:
+            student_name = str(student_match.iloc[0, 1]).strip()
+            # This makes the name and ID very obvious at the top
+            st.success(f"📍 **Currently Selected:** Student #{s_num} - {student_name}")
+        else:
+            st.warning(f"⚠️ Student ID #{s_num} not found in section {section}")
+    except:
+        pass
 
-    # --- 4. FANCY PAYWALL ---
+    logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
+
+    # --- 4. TIERED PAYWALL ---
     st.divider()
     st.markdown(f"""
     ### 💸 Premium Access
@@ -85,53 +97,47 @@ else:
     *Send receipt + Student #{s_num} to get your key.*
     """, unsafe_allow_html=True)
     
-    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
+    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password", help="Paste your 6-digit key here").strip()
     
-    # Correct Keys
+    # Validation Logic
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
-
-    # Access Logic
     is_view = (user_key == correct_view_key)
     is_dl = (user_key == correct_dl_key)
 
     if is_view or is_dl:
-        st.success(f"🔓 Access Granted!")
+        st.toast("Access Granted!", icon="🔓")
         try:
-            # Data Processing
-            names_df = pd.read_excel(input_file, sheet_name=section, header=None)
-            student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
-            if not student_match.empty:
-                student_name = str(student_match.iloc[0, 1]).strip()
-                lower = ((int(s_num) - 1) // 10) * 10 + 1
-                df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
-                start_col = ((int(s_num) - 1) % 10 * 6) + 1
-                raw_vars = df.iloc[0:101, start_col:start_col+5]
-                
-                results = []
-                for _, r in raw_vars.iterrows():
-                    try:
-                        clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
-                        if len(clean_r) == 5:
-                            results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
-                    except: continue
-                    if len(results) >= 100: break
-                
-                if results:
-                    # --- DOWNLOAD SECTION ---
-                    if is_dl:
-                        file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
-                        output = io.BytesIO()
-                        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                            pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
-                        st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
-                    else:
-                        # GREYED OUT BUTTON (Disabled)
-                        st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
-                        st.info("💡 Enter the **Full Key** to enable the download button.")
+            # We already have student_name from above
+            lower = ((int(s_num) - 1) // 10) * 10 + 1
+            df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
+            start_col = ((int(s_num) - 1) % 10 * 6) + 1
+            raw_vars = df.iloc[0:101, start_col:start_col+5]
+            
+            results = []
+            for _, r in raw_vars.iterrows():
+                try:
+                    clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
+                    if len(clean_r) == 5:
+                        results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
+                except: continue
+                if len(results) >= 100: break
+            
+            if results:
+                # DOWNLOAD SECTION
+                if is_dl:
+                    file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
+                    st.download_button("📥 Download Excel File", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                else:
+                    st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
+                    st.info("💡 You are on the ₱200 tier. Send ₱50 more to unlock the Excel file.")
 
-                    # --- TABLE ---
-                    st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
-        except: st.error("Data error.")
+                # TABLE
+                st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
+        except Exception as e:
+            st.error(f"Error processing data: {e}")
     elif user_key != "":
-        st.error("❌ Invalid Key.")
+        st.error("❌ Key mismatch. Ensure you entered the correct key for Student #" + str(s_num))
