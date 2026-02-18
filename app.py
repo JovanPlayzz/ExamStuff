@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import os
 
-# --- LOGIC FUNCTIONS ---
+# --- LOGIC FUNCTIONS (Java & .NET) ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -23,41 +23,48 @@ def process_net(n):
     return arr
 
 # --- UI SETUP ---
-# --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
 
-# Title
-st.title("Java&Net Answerinator")
-
-# Subtext / Description
-st.markdown("""
-lazy? Use this! it basically answers for you
-""")
-
-st.divider() # Adds a clean horizontal line under the explanation
+st.title("📱 Logic Processor")
+st.markdown("Automated result generation for Core and Ryzen sections. Select your details below to preview and download results.")
+st.divider()
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
     st.error(f"❌ '{input_file}' not found in GitHub!")
 else:
-    # 1. Inputs
+    # --- NEW: STUDENT NUMBER LOOKUP EXPANDER ---
+    with st.expander("Don't know student number? Click here"):
+        tab_core, tab_ryzen = st.tabs(["Core Section", "Ryzen Section"])
+        
+        with tab_core:
+            core_names = pd.read_excel(input_file, sheet_name="Core", header=None, engine='openpyxl')
+            core_names.columns = ["ID", "Name"]
+            st.dataframe(core_names, hide_index=True, use_container_width=True)
+            
+        with tab_ryzen:
+            ryzen_names = pd.read_excel(input_file, sheet_name="Ryzen", header=None, engine='openpyxl')
+            ryzen_names.columns = ["ID", "Name"]
+            st.dataframe(ryzen_names, hide_index=True, use_container_width=True)
+
+    # --- MAIN INPUTS ---
     section_choice = st.selectbox("Select Section", ["Core", "Ryzen"])
     student_num = st.number_input("Enter Student Number", min_value=1, value=1)
     logic_choice = st.radio("Select Logic", ["Java", ".NET"], horizontal=True)
 
     try:
-        # 2. Name Lookup
+        # 1. Name Lookup
         names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         student_row = names_df[names_df[0] == student_num]
         
         if student_row.empty:
-            st.warning(f"Student {student_num} not found.")
+            st.warning(f"Student {student_num} not found in {section_choice}.")
         else:
             student_name = str(student_row.iloc[0, 1]).strip()
             st.success(f"✅ Selected: **{student_name}**")
 
-            # 3. Data Extraction & Full Calculation (1-100)
+            # 2. Data Extraction & Full Calculation
             lower = ((student_num - 1) // 10) * 10 + 1
             upper = lower + 9
             data_tab = f"Student {lower} to {upper}"
@@ -76,12 +83,11 @@ else:
                     all_results.append(process_java(nums) if logic_choice == "Java" else process_net(nums))
                 except: continue
 
-            # Create the DataFrame once for both preview and export
             final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3'])
             final_df.index = final_df.index + 1
             final_df = final_df.astype(int)
 
-            # --- ACTION BUTTON (Now on top) ---
+            # --- ACTION BUTTON ---
             logic_label = "Java" if logic_choice == "Java" else "Net"
             filename = f"[{student_num}] {student_name} - {logic_label}.xlsx"
             
@@ -90,7 +96,7 @@ else:
                 final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
             st.download_button(
-                label="📥 Download Full Excel Result",
+                label=f"📥 Download Excel for {student_name}",
                 data=output.getvalue(),
                 file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -98,8 +104,8 @@ else:
                 type="primary"
             )
 
-            # --- FULL PREVIEW (1-100) ---
-            st.subheader(f"📊 Full Results for {student_name}")
+            # --- PREVIEW ---
+            st.subheader("📊 Full Results Preview")
             st.dataframe(final_df, height=400, use_container_width=True)
 
     except Exception as e:
