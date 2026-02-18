@@ -29,20 +29,23 @@ st.title("📱 Logic Processor")
 # Initialize Session State
 if 's_num' not in st.session_state:
     st.session_state.s_num = 1
+if 'expander_open' not in st.session_state:
+    st.session_state.expander_open = False
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
-    st.error("❌ File not found in GitHub!")
+    st.error("❌ File not found!")
 else:
-    # 1. Main Inputs
-    section_choice = st.selectbox("Section", ["Core", "Ryzen"])
-    
-    # We use value=st.session_state.s_num to keep it synced
-    student_num = st.number_input("Student Number", min_value=1, step=1, value=st.session_state.s_num)
+    # --- ROW 1: SECTION & STUDENT NUMBER SIDE-BY-SIDE ---
+    row1_col1, row1_col2 = st.columns([1, 1])
+    with row1_col1:
+        section_choice = st.selectbox("Section", ["Core", "Ryzen"])
+    with row1_col2:
+        student_num = st.number_input("Student Number", min_value=1, step=1, value=st.session_state.s_num)
 
-    # --- CLEAN INTERACTIVE TABLE ---
-    with st.expander("🔍 Find my number", expanded=False):
+    # --- THE INTERACTIVE DROPDOWN ---
+    with st.expander("🔍 Find my number", expanded=st.session_state.expander_open):
         search_query = st.text_input("Type name...", placeholder="Search...", key="search_box").lower()
         
         lookup_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
@@ -52,24 +55,25 @@ else:
             filtered = lookup_df[lookup_df['Name'].str.lower().str.contains(search_query)]
             
             if not filtered.empty:
-                # Header for our "fake" table
-                st.markdown("**ID | Name**")
-                for _, row in filtered.head(8).iterrows():
-                    c1, c2 = st.columns([4, 1])
+                for _, row in filtered.head(6).iterrows():
+                    # SIDE-BY-SIDE: ID/Name on left, Pick button on right
+                    c1, c2 = st.columns([3, 1])
                     c1.write(f"`{row['ID']}` {row['Name']}")
-                    # When clicked, update state and force refresh
-                    if c2.button("Pick", key=f"p_{row['ID']}"):
+                    if c2.button("Pick", key=f"p_{row['ID']}", use_container_width=True):
                         st.session_state.s_num = int(row['ID'])
+                        st.session_state.search_box = "" # Clear text
+                        st.session_state.expander_open = False # Close dropdown
                         st.rerun()
             else:
                 st.caption("No results found.")
         else:
             st.caption("Enter a name to search.")
+            st.session_state.expander_open = False
 
     logic_choice = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
+    # --- PROCESSING ---
     try:
-        # 2. Name Lookup
         names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         student_row = names_df[names_df[0] == student_num]
         
@@ -77,7 +81,7 @@ else:
             student_name = str(student_row.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
-            # 3. Calculation Logic
+            # Calculation Logic
             lower = ((student_num - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
             full_df = pd.read_excel(input_file, sheet_name=data_tab, header=None, engine='openpyxl')
@@ -97,7 +101,7 @@ else:
             final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
             final_df.index = final_df.index + 1
 
-            # 4. Download Button
+            # Download Button
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 final_df.to_excel(writer, index_label='#', sheet_name='Results')
@@ -111,8 +115,7 @@ else:
                 type="primary"
             )
 
-            # 5. Result Display
             st.dataframe(final_df, height=350, use_container_width=True)
 
     except Exception:
-        st.info("Searching for student data...")
+        st.info("Searching for data...")
