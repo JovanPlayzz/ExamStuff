@@ -24,7 +24,6 @@ def process_net(n):
 
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
-    st.toast("Inputted successfully!", icon="✅")
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
@@ -43,7 +42,6 @@ else:
     with col1:
         section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2:
-        # Limit removed: can be any number now
         s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
     # --- SEARCH ---
@@ -64,7 +62,6 @@ else:
 
     # --- DYNAMIC DATA PROCESSING ---
     try:
-        # Load Name and Check Existence
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         names_df[0] = pd.to_numeric(names_df[0], errors='coerce')
         student_match = names_df[names_df[0] == s_num]
@@ -75,7 +72,6 @@ else:
             student_name = str(student_match.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
-            # Calculate Tab & Column
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
             
@@ -106,7 +102,9 @@ else:
                     use_container_width=True,
                     type="primary"
                 )
-                st.dataframe(final_df, height=350, use_container_width=True)
+                
+                # CHANGED: Using st.table instead of st.dataframe to remove interactive buttons
+                st.table(final_df)
 
     except Exception:
         st.info("Searching for data...")
