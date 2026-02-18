@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import os
+import streamlit.components.v1 as components
 
 # --- LOGIC FUNCTIONS ---
 def process_java(n):
@@ -22,34 +23,67 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
+# --- CUSTOM BOTTOM NOTIFICATION LOGIC ---
+def show_custom_toast():
+    # This injects a hidden HTML element that triggers a bottom-center popup
+    components.html(
+        """
+        <div id="toast" style="
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background-color: #28a745; 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 25px; 
+            font-family: sans-serif; 
+            z-index: 9999; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: slideUp 0.5s, fadeOut 0.5s 2.5s forwards;
+            cursor: pointer;
+        " onclick="this.style.display='none'">
+            ✅ Inputted successfully!
+        </div>
+        <style>
+            @keyframes slideUp { from { bottom: -50px; opacity: 0; } to { bottom: 20px; opacity: 1; } }
+            @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        </style>
+        """,
+        height=0
+    )
+
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
-    st.toast("Inputted successfully!", icon="✅")
+    st.session_state.show_toast = True
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
 st.title("📱 Logic Processor")
 
-if 's_num' not in st.session_state:
-    st.session_state.s_num = 1
+if 's_num' not in st.session_state: st.session_state.s_num = 1
+if 'show_toast' not in st.session_state: st.session_state.show_toast = False
+
+# Trigger the custom toast if the flag is set
+if st.session_state.show_toast:
+    show_custom_toast()
+    st.session_state.show_toast = False
 
 input_file = 'variables.xlsx'
 
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- ROW 1: INPUTS ---
+    # --- INPUTS ---
     col1, col2 = st.columns(2)
     with col1:
         section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2:
-        # Limit removed: can be any number now
         s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
     # --- SEARCH ---
     with st.expander("🔍 Find my number"):
         query = st.text_input("Type name...", placeholder="Search...", key="search_box").lower()
-        
         lookup_df = pd.read_excel(input_file, sheet_name=section, header=None)
         lookup_df.columns = ["ID", "Name"]
         
@@ -62,34 +96,25 @@ else:
 
     logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
-    # --- DYNAMIC DATA PROCESSING ---
+    # --- PROCESSING ---
     try:
-        # Load Name and Check Existence
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         names_df[0] = pd.to_numeric(names_df[0], errors='coerce')
         student_match = names_df[names_df[0] == s_num]
         
-        if student_match.empty:
-            st.warning("Student ID not found in this section.")
-        else:
+        if not student_match.empty:
             student_name = str(student_match.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
-            # Calculate Tab & Column
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
-            
             df = pd.read_excel(input_file, sheet_name=data_tab, header=None)
-            start_col = ((int(s_num) - 1) % 10 * 6) + 1
             
+            start_col = ((int(s_num) - 1) % 10 * 6) + 1
             raw_data = df.iloc[0:100, start_col:start_col+5].values.tolist()
-            results = []
-            for r in raw_data:
-                clean_r = [int(float(v)) for v in r if str(v).replace('.','',1).isdigit()]
-                if len(clean_r) == 5:
-                    results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
+            
+            results = [process_java(r) if logic == "Java" else process_net(r) for r in raw_data]
 
-            # Table and Download
             if results:
                 final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
                 final_df.index = final_df.index + 1
@@ -107,6 +132,5 @@ else:
                     type="primary"
                 )
                 st.dataframe(final_df, height=350, use_container_width=True)
-
-    except Exception:
+    except:
         st.info("Searching for data...")
