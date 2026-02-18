@@ -22,17 +22,18 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
-# --- FIXED CALLBACK FUNCTION ---
+# --- CALLBACK ---
 def pick_student(new_id):
     st.session_state.s_num = int(new_id)
     st.session_state.search_box = "" 
-    # This forces the expander closed
-    st.session_state.expander_state = False 
+    # Flip the expander state to False
+    st.session_state.expander_state = False
 
 # --- UI SETUP ---
 st.set_page_config(page_title="Logic Processor", layout="centered")
 st.title("📱 Logic Processor")
 
+# Initialize State
 if 's_num' not in st.session_state:
     st.session_state.s_num = 1
 if 'expander_state' not in st.session_state:
@@ -43,24 +44,25 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ variables.xlsx not found!")
 else:
-    # --- ROW 1: SIDE-BY-SIDE ---
+    # --- ROW 1: INPUTS ---
     col1, col2 = st.columns(2)
     with col1:
         section_choice = st.selectbox("Section", ["Core", "Ryzen"])
     with col2:
-        # Use key="s_num" to link it to state
         student_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
-    # --- LOOKUP DROPDOWN ---
-    # We use the 'expanded' parameter linked to session state
-    with st.expander("🔍 Find my number", expanded=st.session_state.expander_state):
+    # --- THE INTERACTIVE DROPDOWN ---
+    # We use a key for the expander itself to help Streamlit track it
+    expander = st.expander("🔍 Find my number", expanded=st.session_state.expander_state)
+    
+    with expander:
         search_query = st.text_input("Type name...", placeholder="Search...", key="search_box").lower()
         
         lookup_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         lookup_df.columns = ["ID", "Name"]
         
         if search_query:
-            # If the user is typing, keep the expander state open in the background
+            # If they are typing, we assume they want it open
             st.session_state.expander_state = True
             filtered = lookup_df[lookup_df['Name'].str.lower().str.contains(search_query)]
             
@@ -68,10 +70,14 @@ else:
                 for _, row in filtered.head(6).iterrows():
                     c1, c2 = st.columns([3, 1])
                     c1.write(f"`{row['ID']}` {row['Name']}")
-                    # BIG BUTTON: Added use_container_width=True
-                    c2.button("Pick", key=f"btn_{row['ID']}", on_click=pick_student, args=(row['ID'],), use_container_width=True)
+                    if c2.button("Pick", key=f"btn_{row['ID']}", on_click=pick_student, args=(row['ID'],), use_container_width=True):
+                        # The callback handles the state, st.rerun happens automatically after callback
+                        pass
             else:
-                st.caption("No results found.")
+                st.caption("No matches.")
+        else:
+            # If search is empty, we reset the state so it can be closed
+            st.session_state.expander_state = False
 
     logic_choice = st.radio("Logic", ["Java", ".NET"], horizontal=True)
 
@@ -84,7 +90,7 @@ else:
             student_name = str(student_row.iloc[0, 1]).strip()
             st.success(f"✅ **{student_name}**")
 
-            # Data pull
+            # Logic selection and data extraction
             lower = ((student_num - 1) // 10) * 10 + 1
             data_tab = f"Student {lower} to {lower + 9}"
             full_df = pd.read_excel(input_file, sheet_name=data_tab, header=None, engine='openpyxl')
@@ -104,13 +110,13 @@ else:
             final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
             final_df.index = final_df.index + 1
 
-            # Download Result
+            # Download
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 final_df.to_excel(writer, index_label='#', sheet_name='Results')
 
             st.download_button(
-                label="📥 Download Result",
+                label=f"📥 Download Result",
                 data=output.getvalue(),
                 file_name=f"[{student_num}] {student_name}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -119,5 +125,6 @@ else:
             )
 
             st.dataframe(final_df, height=350, use_container_width=True)
+
     except Exception:
-        st.info("Select a student to begin.")
+        st.info("Searching for student data...")
