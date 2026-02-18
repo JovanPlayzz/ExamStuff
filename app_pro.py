@@ -9,6 +9,7 @@ try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
     GCASH_NUMBER = "09924649443" 
+    FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
     st.error("Secrets missing! Set SALT_VIEW and SALT_DOWNLOAD in Dashboard.")
     st.stop()
@@ -46,13 +47,19 @@ st.title("🚀 Java & Net Answerinator [PRO]")
 st.markdown("*Dont know the answers? just use this! it answers for you because your stupid.*")
 st.divider()
 
+# --- THE SCARY DISCLAIMER ---
+st.error("""
+### ⚠️ EXTREME DISCLAIMER:
+**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS.**
+**USE AT YOUR OWN RISK.**
+""", icon="🚫")
+
 if 's_num' not in st.session_state: st.session_state.s_num = 1
 
 input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- STUDENT INPUT SECTION ---
     col1, col2 = st.columns(2)
     with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
@@ -68,38 +75,25 @@ else:
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
-    # --- THE NAME DISPLAY (The part you were looking for!) ---
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
         if not student_match.empty:
             student_name = str(student_match.iloc[0, 1]).strip()
-            # This makes the name and ID very obvious at the top
             st.success(f"📍 **Currently Selected:** Student #{s_num} - {student_name}")
-        else:
-            st.warning(f"⚠️ Student ID #{s_num} not found in section {section}")
-    except:
-        pass
+    except: pass
 
     logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
 
     # --- 4. TIERED PAYWALL ---
     st.divider()
-    st.markdown(f"""
-    ### 💸 Premium Access
-    | Option | Price | Features |
-    | :--- | :--- | :--- |
-    | **View Key** | ₱200 | Online Table Access |
-    | **Full Key** | ₱250 | Online Table + Excel Download |
+    st.markdown(f"### 💸 Premium Access\n| Option | Price |\n| :--- | :--- |\n| **View Key** | ₱200 |\n| **Full Key** | ₱250 |\n\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
     
-    **GCash:** `{GCASH_NUMBER}`
+    st.link_button("📤 Send Receipt to Facebook", FB_LINK, use_container_width=True)
     
-    *Send receipt + Student #{s_num} to get your key.*
-    """, unsafe_allow_html=True)
+    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password", help="Paste your 6-digit key here").strip()
-    
-    # Validation Logic
+    # Correct Keys
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
     is_view = (user_key == correct_view_key)
@@ -108,7 +102,6 @@ else:
     if is_view or is_dl:
         st.toast("Access Granted!", icon="🔓")
         try:
-            # We already have student_name from above
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
             start_col = ((int(s_num) - 1) % 10 * 6) + 1
@@ -124,7 +117,6 @@ else:
                 if len(results) >= 100: break
             
             if results:
-                # DOWNLOAD SECTION
                 if is_dl:
                     file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
                     output = io.BytesIO()
@@ -133,11 +125,6 @@ else:
                     st.download_button("📥 Download Excel File", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                 else:
                     st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
-                    st.info("💡 You are on the ₱200 tier. Send ₱50 more to unlock the Excel file.")
 
-                # TABLE
                 st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
-        except Exception as e:
-            st.error(f"Error processing data: {e}")
-    elif user_key != "":
-        st.error("❌ Key mismatch. Ensure you entered the correct key for Student #" + str(s_num))
+        except: st.error("Data error.")
