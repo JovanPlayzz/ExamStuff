@@ -31,12 +31,13 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error(f"❌ '{input_file}' not found in GitHub!")
 else:
+    # 1. Inputs
     section_choice = st.selectbox("Select Section", ["Core", "Ryzen"])
     student_num = st.number_input("Enter Student Number", min_value=1, value=1)
-    logic_choice = st.radio("Select Logic", ["Java", ".NET"])
+    logic_choice = st.radio("Select Logic", ["Java", ".NET"], horizontal=True)
 
     try:
-        # 1. Name Lookup
+        # 2. Name Lookup
         names_df = pd.read_excel(input_file, sheet_name=section_choice, header=None, engine='openpyxl')
         student_row = names_df[names_df[0] == student_num]
         
@@ -46,7 +47,7 @@ else:
             student_name = str(student_row.iloc[0, 1]).strip()
             st.success(f"✅ Selected: **{student_name}**")
 
-            # 2. Data Extraction
+            # 3. Data Extraction & Full Calculation (1-100)
             lower = ((student_num - 1) // 10) * 10 + 1
             upper = lower + 9
             data_tab = f"Student {lower} to {upper}"
@@ -56,52 +57,40 @@ else:
             start_col = (pos_in_tab * 6) + 1
             end_col = start_col + 5
 
-            # 3. Calculate Sneak Peek (First 5 Rows)
-            preview_results = []
-            for i in range(5):
+            all_results = []
+            for i in range(len(full_df)):
+                if len(all_results) >= 100: break
                 raw_row = full_df.iloc[i, start_col:end_col].tolist()
                 try:
                     nums = [int(float(str(v).strip())) for v in raw_row]
-                    res = process_java(nums) if logic_choice == "Java" else process_net(nums)
-                    preview_results.append(res)
+                    all_results.append(process_java(nums) if logic_choice == "Java" else process_net(nums))
                 except: continue
-            
-            # Display Sneak Peek Table
-            st.subheader("🔍 Result Sneak Peek (First 5 Rows)")
-            preview_df = pd.DataFrame(preview_results, columns=['Output 1', 'Output 2', 'Output 3'])
-            preview_df.index = preview_df.index + 1
-            
-            # Force integers and display
-            st.table(preview_df.astype(int))
-            st.write("...")
 
-            # 4. Final Download Generation
-            if st.button("Generate Full Excel Result", type="primary"):
-                all_results = []
-                for i in range(len(full_df)):
-                    if len(all_results) >= 100: break
-                    raw_row = full_df.iloc[i, start_col:end_col].tolist()
-                    try:
-                        nums = [int(float(str(v).strip())) for v in raw_row]
-                        all_results.append(process_java(nums) if logic_choice == "Java" else process_net(nums))
-                    except: continue
+            # Create the DataFrame once for both preview and export
+            final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3'])
+            final_df.index = final_df.index + 1
+            final_df = final_df.astype(int)
 
-                output = io.BytesIO()
-                final_df = pd.DataFrame(all_results, columns=['Output 1', 'Output 2', 'Output 3'])
-                final_df.index = final_df.index + 1
-                
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                    # Convert to int for the Excel file too
-                    final_df.astype(int).to_excel(writer, index_label='#', sheet_name='Results')
-                
-                logic_label = "Java" if logic_choice == "Java" else "Net"
-                filename = f"[{student_num}] {student_name} - {logic_label}.xlsx"
-                
-                st.download_button(
-                    label="📥 Download Full Excel",
-                    data=output.getvalue(),
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+            # --- ACTION BUTTON (Now on top) ---
+            logic_label = "Java" if logic_choice == "Java" else "Net"
+            filename = f"[{student_num}] {student_name} - {logic_label}.xlsx"
+            
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                final_df.to_excel(writer, index_label='#', sheet_name='Results')
+
+            st.download_button(
+                label="📥 Download Full Excel Result",
+                data=output.getvalue(),
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                type="primary"
+            )
+
+            # --- FULL PREVIEW (1-100) ---
+            st.subheader(f"📊 Full Results for {student_name}")
+            st.dataframe(final_df, height=400, use_container_width=True)
+
     except Exception as e:
         st.error(f"Error: {e}")
