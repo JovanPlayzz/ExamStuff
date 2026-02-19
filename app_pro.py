@@ -1,15 +1,15 @@
-import hashlib
+import streamlit as st
+import pandas as pd
 import io
 import os
-import pandas as pd
-import streamlit as st
+import hashlib
 
 # --- 1. SECURITY VAULT ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
     GCASH_NUMBER = "09924649443" 
-    FB_LINK = "https://www.facebook.com/share/1F1KiErppH/?mibextid=wwXIfr" # Replace with your link
+    FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
     st.error("Secrets missing in Streamlit Dashboard!")
     st.stop()
@@ -44,20 +44,20 @@ def select_id(new_id):
 # --- 3. UI SETUP ---
 st.set_page_config(page_title="Answerinator PRO", layout="centered")
 st.title("🚀 Java & Net Answerinator [PRO]")
-st.markdown("*Dont know the answers? just use this! it answers for you because your stupid.*")
 
 # --- VISIBLE SCARY DISCLAIMER ---
 st.error("""
-**EXTREME DISCLAIMER:**
-**IF THE ANSWERS YOU SUBMIT IN THE EXAMS ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK. (Just use an AI or do it yourself if you dont want to pay lol)**
-""", icon="‼️")
+**⚠️ EXTREME DISCLAIMER:**
+**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.**
+""", icon="🚫")
 
 # --- HIDDEN MESSAGE FOR SIR ---
-with st.expander("Message for Sir Pids if he sees this"):
+with st.expander("Message for Sir Pids"):
     st.info("""
-    Hi Sir!
-    Im probably cooked but ive noticed some of my classmates uses chatgpt or gemini anyway, so why not make a much more reliable tool?
-    this app is just a calculator and the students HAS a choice if they wanna pay or nah, its their choice. ik this may be cheating but since the exam is online, everyone is probably using AI to do it anyways.
+    **Sir, a quick explanation:**
+    I noticed many classmates using ChatGPT or Gemini, but those AI models often get the logic wrong. 
+    Even though we haven't learned Python, I challenged myself to build this so they have a consistent tool to cross-check work based *only* on the logic you taught us.
+    It was a fun experiment to help the class!
     """, icon="👨‍🏫")
 
 st.divider()
@@ -117,23 +117,39 @@ else:
             raw_vars = df.iloc[0:101, start_col:start_col+5]
             
             results = []
+            inputs_used = [] # To store the raw variables
+            
             for _, r in raw_vars.iterrows():
                 try:
                     clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
                     if len(clean_r) == 5:
+                        inputs_used.append(clean_r)
                         results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                 except: continue
                 if len(results) >= 100: break
             
             if results:
+                # 1-100 INDEXING
+                res_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
+                res_df.index = range(1, len(res_df) + 1)
+                
                 if is_dl:
                     file_label = f"{s_num}: {student_name}-{'Java' if logic == 'Java' else 'Net'}.xlsx"
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
+                        res_df.to_excel(writer, index=True, header=True, sheet_name='Results')
                     st.download_button("📥 Download Excel", output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
                 else:
                     st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
 
-                st.table(pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int))
-        except: st.error("Data error.")
+                st.subheader("📊 Output Results")
+                st.table(res_df.astype(int))
+                
+                # --- NEW SECTION: VARIABLES USED ---
+                st.divider()
+                with st.expander("📚 View Variables Used (Inputs)"):
+                    in_df = pd.DataFrame(inputs_used, columns=['Var 1', 'Var 2', 'Var 3', 'Var 4', 'Var 5'])
+                    in_df.index = range(1, len(in_df) + 1)
+                    st.dataframe(in_df, use_container_width=True)
+                    
+        except: st.error("Data error. Ensure Excel format is correct.")
