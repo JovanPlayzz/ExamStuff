@@ -8,10 +8,12 @@ import hashlib
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
+    # Add MASTER_PASS to your Streamlit Secrets!
+    MASTER_PASS = st.secrets["MASTER_PASS"] 
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("Secrets missing in Streamlit Dashboard!")
+    st.error("Secrets missing in Streamlit Dashboard! (Need SALT_VIEW, SALT_DOWNLOAD, and MASTER_PASS)")
     st.stop()
 
 def generate_key(student_id, salt):
@@ -48,16 +50,16 @@ st.title("🚀 Java & Net Answerinator [PRO]")
 # --- VISIBLE SCARY DISCLAIMER ---
 st.error("""
 **⚠️ EXTREME DISCLAIMER:**
-**IF THE ANSWERS YOU SUBMIT HERE ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.**
+**IF THE ANSWERS YOU SUBMIT IN THE EXAM ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK. (Just use an AI/Do it yourself if you dont want to pay lol)**
 """, icon="🚫")
 
 # --- HIDDEN MESSAGE FOR SIR ---
 with st.expander("Message for Sir Pids"):
     st.info("""
-    **Sir, a quick explanation:**
-    I noticed many classmates using ChatGPT or Gemini, but those AI models often get the logic wrong. 
-    Even though we haven't learned Python, I challenged myself to build this so they have a consistent tool to cross-check work based *only* on the logic you taught us.
-    It was a fun experiment to help the class!
+    **Hi Sir!**
+    Im probably cooked but ive noticed some of my classmates uses chatgpt or gemini anyway, so why not make a much more reliable tool? 
+    This app is just a calculator and the people whos gonna use this HAS a choice if they want to pay or nah, its their choice. 
+    I know this maybe cheating but since the exam is online, everyone is probably already using AI to do it anyway.
     """, icon="👨‍🏫")
 
 st.divider()
@@ -117,7 +119,7 @@ else:
             raw_vars = df.iloc[0:101, start_col:start_col+5]
             
             results = []
-            inputs_used = [] # To store the raw variables
+            inputs_used = []
             
             for _, r in raw_vars.iterrows():
                 try:
@@ -129,7 +131,6 @@ else:
                 if len(results) >= 100: break
             
             if results:
-                # 1-100 INDEXING
                 res_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
                 res_df.index = range(1, len(res_df) + 1)
                 
@@ -145,7 +146,6 @@ else:
                 st.subheader("📊 Output Results")
                 st.table(res_df.astype(int))
                 
-                # --- NEW SECTION: VARIABLES USED ---
                 st.divider()
                 with st.expander("📚 View Variables Used (Inputs)"):
                     in_df = pd.DataFrame(inputs_used, columns=['Var 1', 'Var 2', 'Var 3', 'Var 4', 'Var 5'])
@@ -153,3 +153,21 @@ else:
                     st.dataframe(in_df, use_container_width=True)
                     
         except: st.error("Data error. Ensure Excel format is correct.")
+
+# --- 5. ADMIN CALCULATOR (Bottom Secret) ---
+st.write("---")
+with st.expander("🛠️ Admin Panel"):
+    admin_input = st.text_input("Master Password", type="password")
+    if admin_input == MASTER_PASS:
+        st.success("Welcome back, Master.")
+        target_id = st.number_input("Generate Key for Student ID:", min_value=1, step=1)
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            v_key = generate_key(target_id, SALT_VIEW)
+            st.code(f"View Only: {v_key}", language="text")
+        with c2:
+            d_key = generate_key(target_id, SALT_DL)
+            st.code(f"Full Access: {d_key}", language="text")
+    elif admin_input != "":
+        st.error("Access Denied.")
