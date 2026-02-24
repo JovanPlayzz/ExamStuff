@@ -53,7 +53,7 @@ st.title("🚀 Java & Net Answerinator [PRO]")
 st.error("**⚠️ EXTREME DISCLAIMER:** IF THE ANSWERS YOU SUBMIT IN THE EXAM ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.", icon="🚫")
 
 with st.expander("Message for Sir Pids"):
-    st.info("Sir, I noticed classmates using unreliable AI, so I built this to ensure the logic follows what you taught us. It's a coding experiment! Please have mercy.", icon="👨‍🏫")
+    st.info("hi ser HAHAA", icon="👨‍🏫")
 
 st.divider()
 
