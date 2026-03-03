@@ -1,3 +1,31 @@
+# --- APP-LIKE STYLING ---
+st.set_page_config(
+    page_title="Answerinator PRO",
+    page_icon="🚀",
+    layout="centered"
+)
+
+# This CSS hides the top bar and footer to make it look like a native app
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stApp {
+        margin-top: -60px;
+    }
+    /* Make buttons look more mobile-friendly */
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        background-color: #007bff;
+        color: white;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 import streamlit as st
 import pandas as pd
 import io
