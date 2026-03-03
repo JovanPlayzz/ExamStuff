@@ -11,13 +11,18 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. THE ICON & "APP-IFY" HACK ---
-# This block forces the icon and hides the "web" elements
+# --- 2. THE ICON & PWA "FORCE" HACK ---
+# This block tells iOS Safari: "I am a standalone app, use this icon."
 st.markdown(
     """
-    <link rel="apple-touch-icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
-    <link rel="icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <link rel="apple-touch-icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+        <link rel="icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+    </head>
     <style>
+        /* Hide UI elements to look like a real app */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
@@ -26,6 +31,7 @@ st.markdown(
             background-color: #0e1117; 
             color: white; 
         }
+        /* Mobile-friendly buttons */
         .stButton>button {
             width: 100%;
             border-radius: 12px;
@@ -35,6 +41,7 @@ st.markdown(
             border: none;
             font-weight: bold;
         }
+        /* Clean table for dark mode */
         table { 
             background-color: #161b22; 
             color: white; 
@@ -53,7 +60,7 @@ try:
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("⚠️ Secrets missing in Dashboard!")
+    st.error("⚠️ Secrets missing! Go to Streamlit Dashboard -> Settings -> Secrets.")
     st.stop()
 
 if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
@@ -64,7 +71,7 @@ def generate_key(student_id, salt):
     hash_hex = hashlib.sha256(combined.encode()).hexdigest()
     return str(int(hash_hex[:8], 16))[:6]
 
-# --- 4. LOGIC ---
+# --- 4. EXAM LOGIC ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
