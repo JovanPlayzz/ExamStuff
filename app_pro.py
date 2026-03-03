@@ -12,19 +12,30 @@ try:
 except:
     st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide")
 
-# --- 2. STYLE & BRANDING HIDE ---
+# --- 2. THE NUCLEAR CSS OVERRIDE ---
 st.markdown(
     """
     <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;} /* Hides 'Built with Streamlit' */
-        header {visibility: hidden;}
+        /* Force delete the footer and header */
+        footer {display: none !important; visibility: hidden !important;}
+        #MainMenu {display: none !important;}
+        header {display: none !important;}
+        
+        /* Target the specific Streamlit branding container */
+        div[data-testid="stStatusWidget"] {display: none !important;}
+        .viewerBadge_container__1QSob {display: none !important;}
+        
+        /* Remove padding and fix background */
+        .block-container {
+            padding-top: 0rem;
+            padding-bottom: 0rem;
+        }
         .stApp {
             background-color: #0e1117;
-            color: white;
-            margin-top: -80px;
+            margin-top: -90px;
         }
-        /* Mobile-friendly buttons */
+        
+        /* Full width pro buttons */
         .stButton>button {
             width: 100%;
             border-radius: 12px;
@@ -34,9 +45,10 @@ st.markdown(
             border: none;
             font-weight: bold;
         }
-        /* Hide the 'Fullscreen' button in the bottom right */
+        
+        /* Hide the fullscreen button */
         button[title="View fullscreen"] {
-            visibility: hidden;
+            display: none !important;
         }
     </style>
     """,
@@ -51,7 +63,7 @@ try:
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("⚠️ Secrets missing in Streamlit Dashboard!")
+    st.error("⚠️ Secrets missing! Go to Streamlit Dashboard -> Settings -> Secrets.")
     st.stop()
 
 if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
