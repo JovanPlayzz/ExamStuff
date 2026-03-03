@@ -4,53 +4,27 @@ import io
 import os
 import hashlib
 
-# --- 1. APP CONFIG (MUST BE FIRST) ---
-st.set_page_config(
-    page_title="Answerinator PRO",
-    page_icon="🚀",
-    layout="centered"
-)
+# --- 1. APP CONFIG ---
+st.set_page_config(page_title="Answerinator PRO", page_icon="🚀")
 
-# --- 2. THE ICON & PWA "FORCE" HACK ---
-# This block tells iOS Safari: "I am a standalone app, use this icon."
+# --- 2. THE "ULTIMATE" ICON FORCE ---
 st.markdown(
     """
     <head>
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black">
         <link rel="apple-touch-icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
-        <link rel="icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+        <link rel="apple-touch-icon-precomposed" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+        <link rel="shortcut icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
     </head>
     <style>
-        /* Hide UI elements to look like a real app */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
-        .stApp { 
-            margin-top: -70px; 
-            background-color: #0e1117; 
-            color: white; 
-        }
-        /* Mobile-friendly buttons */
-        .stButton>button {
-            width: 100%;
-            border-radius: 12px;
-            height: 3.5em;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            font-weight: bold;
-        }
-        /* Clean table for dark mode */
-        table { 
-            background-color: #161b22; 
-            color: white; 
-            border-radius: 10px; 
-        }
+        .stApp { margin-top: -70px; background-color: #0e1117; color: white; }
     </style>
     """, 
     unsafe_allow_html=True
 )
+
 
 # --- 3. SECURITY VAULT ---
 try:
