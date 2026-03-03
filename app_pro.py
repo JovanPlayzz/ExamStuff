@@ -4,24 +4,23 @@ import io
 import os
 import hashlib
 
-# --- APP-LIKE STYLING ---
+# --- 1. APP CONFIG (MUST BE FIRST) ---
 st.set_page_config(
     page_title="Answerinator PRO",
     page_icon="🚀",
     layout="centered"
 )
+
+# --- 2. ICON & APP-LIKE STYLING ---
+# This links your Pinterest image as the Home Screen icon
 st.markdown('<link rel="apple-touch-icon" href="https://i.pinimg.com/736x/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">', unsafe_allow_html=True)
 
-# This CSS hides the top bar and footer to make it look like a native app
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    .stApp {
-        margin-top: -60px;
-    }
-    /* Make buttons look more mobile-friendly */
+    .stApp { margin-top: -60px; }
     .stButton>button {
         width: 100%;
         border-radius: 10px;
@@ -32,8 +31,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
-# --- 1. SECURITY VAULT ---
+# --- 3. SECURITY VAULT ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
@@ -44,16 +42,17 @@ except:
     st.error("Secrets missing in Dashboard!")
     st.stop()
 
-# Initialize Admin Mode in Session State so it persists
 if 'admin_mode' not in st.session_state:
     st.session_state.admin_mode = "None"
+if 's_num' not in st.session_state: 
+    st.session_state.s_num = 1
 
 def generate_key(student_id, salt):
     combined = f"{student_id}{salt}"
     hash_hex = hashlib.sha256(combined.encode()).hexdigest()
     return str(int(hash_hex[:8], 16))[:6]
 
-# --- 2. LOGIC FUNCTIONS ---
+# --- 4. LOGIC FUNCTIONS ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -75,29 +74,23 @@ def process_net(n):
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
 
-# --- 3. UI SETUP ---
-st.set_page_config(page_title="Answerinator PRO", layout="centered")
+# --- 5. UI MAIN ---
 st.title("🚀 Java & Net Answerinator [PRO]")
-
-st.error("**⚠️ EXTREME DISCLAIMER:** IF THE ANSWERS YOU SUBMIT IN THE EXAM ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.", icon="🚫")
+st.error("**⚠️ EXTREME DISCLAIMER:** USE AT YOUR OWN RISK.", icon="🚫")
 
 with st.expander("Message for Sir Pids"):
     st.info("hi ser HAHAA", icon="👨‍🏫")
 
 st.divider()
 
-if 's_num' not in st.session_state: st.session_state.s_num = 1
-
 input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- INPUTS ---
     col1, col2 = st.columns(2)
     with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
-    # SEARCH
     with st.expander("🔍 Find my number"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
         ldf.columns = ["ID", "Name"]
@@ -109,25 +102,21 @@ else:
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
-    # NAME DISPLAY
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
         if not student_match.empty:
-            student_name = str(student_match.iloc[0, 1]).strip()
-            st.success(f"📍 **Selected:** Student #{s_num} - {student_name}")
+            st.success(f"📍 **Selected:** Student #{s_num} - {str(student_match.iloc[0, 1]).strip()}")
     except: pass
 
     logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
 
-    # --- 4. ACCESS CONTROL ---
     st.divider()
-    st.markdown(f"### 💸 Premium Access\n| Option | Price |\n| :--- | :--- |\n| **View Key** | ₱200 |\n| **Full Key** | ₱250 |\n\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
+    st.markdown(f"### 💸 Premium Access\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
     st.link_button("📤 Send Receipt to Facebook", FB_LINK, use_container_width=True)
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    # GOD MODE CHECK
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
     
@@ -144,9 +133,7 @@ else:
             start_col = ((int(s_num) - 1) % 10 * 6) + 1
             raw_vars = df.iloc[0:101, start_col:start_col+5]
             
-            results = []
-            inputs_used = []
-            
+            results, inputs_used = [], []
             for _, r in raw_vars.iterrows():
                 try:
                     clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
@@ -154,7 +141,6 @@ else:
                         inputs_used.append(clean_r)
                         results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                 except: continue
-                if len(results) >= 100: break
             
             if results:
                 res_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
@@ -169,14 +155,9 @@ else:
                     st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
 
                 st.table(res_df.astype(int))
-                
-                with st.expander("📚 View Variables Used"):
-                    in_df = pd.DataFrame(inputs_used, columns=['V1', 'V2', 'V3', 'V4', 'V5'])
-                    in_df.index = range(1, len(in_df) + 1)
-                    st.dataframe(in_df, use_container_width=True)
         except: st.error("Data error.")
 
-# --- 5. ADMIN PANEL ---
+# --- 6. ADMIN PANEL ---
 st.write("---")
 with st.expander("🛠️ Admin Controls"):
     pwd = st.text_input("Admin Password", type="password", key="admin_pwd_input")
@@ -186,9 +167,4 @@ with st.expander("🛠️ Admin Controls"):
         if st.button("Apply Admin Mode"):
             st.session_state.admin_mode = choice
             st.rerun()
-        
-        st.divider()
-        st.write(f"**Customer Keys for Student #{s_num}:**")
         st.code(f"View: {correct_view_key}\nFull: {correct_dl_key}")
-    elif pwd != "":
-        st.error("Wrong Password")
