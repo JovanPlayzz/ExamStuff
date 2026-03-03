@@ -5,37 +5,30 @@ import os
 import hashlib
 from PIL import Image
 
-# --- 1. APP CONFIG ---
+# --- 1. APP CONFIG (Must be the very first Streamlit command) ---
 try:
+    # If you have icon.png in your repo, this uses it for the browser tab
     img = Image.open("icon.png")
     st.set_page_config(page_title="Answerinator PRO", page_icon=img, layout="wide")
 except:
     st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide")
 
-# --- 2. THE NUCLEAR CSS OVERRIDE ---
+# --- 2. CLEAN UI STYLING ---
 st.markdown(
     """
     <style>
-        /* Force delete the footer and header */
-        footer {display: none !important; visibility: hidden !important;}
-        #MainMenu {display: none !important;}
-        header {display: none !important;}
+        /* Hides the top hamburger menu and header bar */
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
         
-        /* Target the specific Streamlit branding container */
-        div[data-testid="stStatusWidget"] {display: none !important;}
-        .viewerBadge_container__1QSob {display: none !important;}
-        
-        /* Remove padding and fix background */
-        .block-container {
-            padding-top: 0rem;
-            padding-bottom: 0rem;
-        }
+        /* Dark theme colors and spacing */
         .stApp {
             background-color: #0e1117;
-            margin-top: -90px;
+            color: white;
+            margin-top: -70px; /* Pulls content up to hide the gap */
         }
         
-        /* Full width pro buttons */
+        /* Pro-looking Full Width Buttons */
         .stButton>button {
             width: 100%;
             border-radius: 12px;
@@ -44,18 +37,19 @@ st.markdown(
             color: white;
             border: none;
             font-weight: bold;
+            margin-top: 10px;
         }
-        
-        /* Hide the fullscreen button */
-        button[title="View fullscreen"] {
-            display: none !important;
+
+        /* Makes the disclaimer look better */
+        .stAlert {
+            border-radius: 12px;
         }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- 3. SECURITY VAULT ---
+# --- 3. SECURITY & SECRETS ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
@@ -63,7 +57,7 @@ try:
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("⚠️ Secrets missing! Go to Streamlit Dashboard -> Settings -> Secrets.")
+    st.error("⚠️ SECRETS MISSING! Set them in Streamlit Cloud -> Settings -> Secrets.")
     st.stop()
 
 if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
@@ -93,7 +87,8 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
-def select_id(new_id): st.session_state.s_num = int(new_id)
+def select_id(new_id): 
+    st.session_state.s_num = int(new_id)
 
 # --- 5. MAIN UI ---
 st.title("🚀 Java & Net Answerinator")
@@ -102,8 +97,10 @@ st.error("**⚠️ EXTREME DISCLAIMER:** USE AT YOUR OWN RISK.", icon="🚫")
 input_file = 'variables.xlsx'
 if os.path.exists(input_file):
     col1, col2 = st.columns(2)
-    with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
-    with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
+    with col1: 
+        section = st.selectbox("Section", ["Core", "Ryzen"])
+    with col2: 
+        s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
     with st.expander("🔍 Find my ID"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
@@ -148,21 +145,24 @@ if os.path.exists(input_file):
             if results:
                 res_df = pd.DataFrame(results, columns=['Out 1', 'Out 2', 'Out 3'])
                 res_df.index = range(1, len(res_df) + 1)
+                
                 if is_dl:
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         res_df.to_excel(writer, index=True, header=True, sheet_name='Results')
                     st.download_button("📥 Download Excel", output.getvalue(), file_name=f"Result_{s_num}.xlsx", use_container_width=True, type="primary")
+                
                 st.table(res_df.astype(int))
-        except: st.error("Data error.")
+        except: 
+            st.error("Data error. Check your Excel formatting.")
 
 # --- 6. ADMIN ---
 st.write("---")
 with st.expander("🛠️ Admin Controls"):
     pwd = st.text_input("Admin Password", type="password")
     if pwd == MASTER_PASS:
-        choice = st.radio("Access:", ["None", "View", "Full"])
-        if st.button("Set Mode"):
+        choice = st.radio("Access Level:", ["None", "View", "Full"])
+        if st.button("Apply Admin Mode"):
             st.session_state.admin_mode = choice
             st.rerun()
-        st.code(f"View: {correct_view_key}\nFull: {correct_dl_key}")
+        st.code(f"Current Student Keys:\nView: {correct_view_key}\nFull: {correct_dl_key}")
