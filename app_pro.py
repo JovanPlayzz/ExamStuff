@@ -3,53 +3,8 @@ import pandas as pd
 import io
 import os
 import hashlib
-from PIL import Image
 
-# --- 1. APP CONFIG (Must be the very first Streamlit command) ---
-try:
-    # If you have icon.png in your repo, this uses it for the browser tab
-    img = Image.open("icon.png")
-    st.set_page_config(page_title="Answerinator PRO", page_icon=img, layout="wide")
-except:
-    st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide")
-
-# --- 2. CLEAN UI STYLING ---
-st.markdown(
-    """
-    <style>
-        /* Hides the top hamburger menu and header bar */
-        #MainMenu {visibility: hidden;}
-        header {visibility: hidden;}
-        
-        /* Dark theme colors and spacing */
-        .stApp {
-            background-color: #0e1117;
-            color: white;
-            margin-top: -70px; /* Pulls content up to hide the gap */
-        }
-        
-        /* Pro-looking Full Width Buttons */
-        .stButton>button {
-            width: 100%;
-            border-radius: 12px;
-            height: 3.5em;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        /* Makes the disclaimer look better */
-        .stAlert {
-            border-radius: 12px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# --- 3. SECURITY & SECRETS ---
+# --- 1. SECURITY VAULT ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
@@ -57,18 +12,19 @@ try:
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("⚠️ SECRETS MISSING! Set them in Streamlit Cloud -> Settings -> Secrets.")
+    st.error("Secrets missing in Dashboard!")
     st.stop()
 
-if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
-if 's_num' not in st.session_state: st.session_state.s_num = 1
+# Initialize Admin Mode in Session State so it persists
+if 'admin_mode' not in st.session_state:
+    st.session_state.admin_mode = "None"
 
 def generate_key(student_id, salt):
     combined = f"{student_id}{salt}"
     hash_hex = hashlib.sha256(combined.encode()).hexdigest()
     return str(int(hash_hex[:8], 16))[:6]
 
-# --- 4. EXAM LOGIC ---
+# --- 2. LOGIC FUNCTIONS ---
 def process_java(n):
     arr = [0, 0, 0]
     for x in range(3):
@@ -87,22 +43,33 @@ def process_net(n):
         else: arr[x] = n[1] + n[4] + x
     return arr
 
-def select_id(new_id): 
+def select_id(new_id):
     st.session_state.s_num = int(new_id)
 
-# --- 5. MAIN UI ---
-st.title("🚀 Java & Net Answerinator")
-st.error("**⚠️ EXTREME DISCLAIMER:** USE AT YOUR OWN RISK.", icon="🚫")
+# --- 3. UI SETUP ---
+st.set_page_config(page_title="Answerinator PRO", layout="centered")
+st.title("🚀 Java & Net Answerinator [PRO]")
+
+st.error("**⚠️ EXTREME DISCLAIMER:** IF THE ANSWERS YOU SUBMIT IN THE EXAM ARE WRONG, DO NOT BLAME THE ONE WHO MADE THIS. USE AT YOUR OWN RISK.", icon="🚫")
+
+with st.expander("Message for Sir Pids"):
+    st.info("Sir, I noticed classmates using unreliable AI, so I built this to ensure the logic follows what you taught us. It's a coding experiment! Please have mercy.", icon="👨‍🏫")
+
+st.divider()
+
+if 's_num' not in st.session_state: st.session_state.s_num = 1
 
 input_file = 'variables.xlsx'
-if os.path.exists(input_file):
+if not os.path.exists(input_file):
+    st.error("❌ File 'variables.xlsx' not found!")
+else:
+    # --- INPUTS ---
     col1, col2 = st.columns(2)
-    with col1: 
-        section = st.selectbox("Section", ["Core", "Ryzen"])
-    with col2: 
-        s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
+    with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
+    with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
-    with st.expander("🔍 Find my ID"):
+    # SEARCH
+    with st.expander("🔍 Find my number"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
         ldf.columns = ["ID", "Name"]
         query = st.text_input("Type name...", key="search_box").lower()
@@ -113,14 +80,25 @@ if os.path.exists(input_file):
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
+    # NAME DISPLAY
+    try:
+        names_df = pd.read_excel(input_file, sheet_name=section, header=None)
+        student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
+        if not student_match.empty:
+            student_name = str(student_match.iloc[0, 1]).strip()
+            st.success(f"📍 **Selected:** Student #{s_num} - {student_name}")
+    except: pass
+
     logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
 
+    # --- 4. ACCESS CONTROL ---
     st.divider()
-    st.markdown(f"### 💸 Premium Access\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
+    st.markdown(f"### 💸 Premium Access\n| Option | Price |\n| :--- | :--- |\n| **View Key** | ₱200 |\n| **Full Key** | ₱250 |\n\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
     st.link_button("📤 Send Receipt to Facebook", FB_LINK, use_container_width=True)
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
+    # GOD MODE CHECK
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
     
@@ -128,6 +106,9 @@ if os.path.exists(input_file):
     is_dl = (user_key == correct_dl_key) or (st.session_state.admin_mode == "Full")
 
     if is_view or is_dl:
+        if st.session_state.admin_mode != "None":
+            st.warning(f"🛠️ ADMIN OVERRIDE: {st.session_state.admin_mode} Mode Active")
+        
         try:
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
@@ -135,15 +116,19 @@ if os.path.exists(input_file):
             raw_vars = df.iloc[0:101, start_col:start_col+5]
             
             results = []
+            inputs_used = []
+            
             for _, r in raw_vars.iterrows():
                 try:
                     clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
                     if len(clean_r) == 5:
+                        inputs_used.append(clean_r)
                         results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
                 except: continue
+                if len(results) >= 100: break
             
             if results:
-                res_df = pd.DataFrame(results, columns=['Out 1', 'Out 2', 'Out 3'])
+                res_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
                 res_df.index = range(1, len(res_df) + 1)
                 
                 if is_dl:
@@ -151,18 +136,30 @@ if os.path.exists(input_file):
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         res_df.to_excel(writer, index=True, header=True, sheet_name='Results')
                     st.download_button("📥 Download Excel", output.getvalue(), file_name=f"Result_{s_num}.xlsx", use_container_width=True, type="primary")
-                
-                st.table(res_df.astype(int))
-        except: 
-            st.error("Data error. Check your Excel formatting.")
+                else:
+                    st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
 
-# --- 6. ADMIN ---
+                st.table(res_df.astype(int))
+                
+                with st.expander("📚 View Variables Used"):
+                    in_df = pd.DataFrame(inputs_used, columns=['V1', 'V2', 'V3', 'V4', 'V5'])
+                    in_df.index = range(1, len(in_df) + 1)
+                    st.dataframe(in_df, use_container_width=True)
+        except: st.error("Data error.")
+
+# --- 5. ADMIN PANEL ---
 st.write("---")
 with st.expander("🛠️ Admin Controls"):
-    pwd = st.text_input("Admin Password", type="password")
+    pwd = st.text_input("Admin Password", type="password", key="admin_pwd_input")
     if pwd == MASTER_PASS:
-        choice = st.radio("Access Level:", ["None", "View", "Full"])
+        choice = st.radio("Set My Access Level:", ["None", "View", "Full"], 
+                          index=0 if st.session_state.admin_mode=="None" else (1 if st.session_state.admin_mode=="View" else 2))
         if st.button("Apply Admin Mode"):
             st.session_state.admin_mode = choice
             st.rerun()
-        st.code(f"Current Student Keys:\nView: {correct_view_key}\nFull: {correct_dl_key}")
+        
+        st.divider()
+        st.write(f"**Customer Keys for Student #{s_num}:**")
+        st.code(f"View: {correct_view_key}\nFull: {correct_dl_key}")
+    elif pwd != "":
+        st.error("Wrong Password")
