@@ -3,17 +3,31 @@ import pandas as pd
 import io
 import os
 import hashlib
+from PIL import Image
 
-# --- APP CONFIG ---
+# --- 1. APP CONFIG ---
+# Try to load your local icon.png for the browser tab
+try:
+    img = Image.open("icon.png")
+except:
+    img = "🚀"
+
 st.set_page_config(
     page_title="Answerinator PRO",
-    page_icon="icon.png",  # must match file name EXACTLY
-    layout="wide"
+    page_icon=img,
+    layout="centered"
 )
 
-# --- STYLE ---
+# --- 2. STYLE & APPLE ICON OVERRIDE ---
+# We use a trick here: Since we can't easily link a local file in HTML, 
+# we use your Pinterest link for the 'Add to Home Screen' icon specifically.
 st.markdown(
     """
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <link rel="apple-touch-icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
+    </head>
     <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
@@ -21,6 +35,17 @@ st.markdown(
         .stApp {
             background-color: #0e1117;
             color: white;
+            margin-top: -70px;
+        }
+        /* App-like buttons */
+        .stButton>button {
+            width: 100%;
+            border-radius: 12px;
+            height: 3.5em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            font-weight: bold;
         }
     </style>
     """,
@@ -35,7 +60,7 @@ try:
     GCASH_NUMBER = "09924649443" 
     FB_LINK = "https://www.facebook.com/your.profile.name" 
 except:
-    st.error("⚠️ Secrets missing! Go to Streamlit Dashboard -> Settings -> Secrets.")
+    st.error("⚠️ Secrets missing! Check Streamlit Dashboard Settings.")
     st.stop()
 
 if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
@@ -70,11 +95,6 @@ def select_id(new_id): st.session_state.s_num = int(new_id)
 # --- 5. MAIN UI ---
 st.title("🚀 Java & Net Answerinator")
 st.error("**⚠️ EXTREME DISCLAIMER:** USE AT YOUR OWN RISK.", icon="🚫")
-
-with st.expander("Message for Sir Pids"):
-    st.info("hi ser HAHAA", icon="👨‍🏫")
-
-st.divider()
 
 input_file = 'variables.xlsx'
 if os.path.exists(input_file):
@@ -123,7 +143,7 @@ if os.path.exists(input_file):
                 except: continue
             
             if results:
-                res_df = pd.DataFrame(results, columns=['Out 1', 'Out 2', 'Out 3'])
+                res_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3'])
                 res_df.index = range(1, len(res_df) + 1)
                 if is_dl:
                     output = io.BytesIO()
