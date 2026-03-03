@@ -14,6 +14,7 @@ st.set_page_config(
 # This CSS hides the top bar and footer to make it look like a native app
 st.markdown("""
     <style>
+    st.markdown('<link rel="apple-touch-icon" href="https://i.pinimg.com/736x/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">', unsafe_allow_html=True)
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
