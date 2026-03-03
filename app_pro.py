@@ -1,3 +1,9 @@
+import streamlit as st
+import pandas as pd
+import io
+import os
+import hashlib
+
 # --- APP-LIKE STYLING ---
 st.set_page_config(
     page_title="Answerinator PRO",
@@ -25,12 +31,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-
-import streamlit as st
-import pandas as pd
-import io
-import os
-import hashlib
 
 # --- 1. SECURITY VAULT ---
 try:
