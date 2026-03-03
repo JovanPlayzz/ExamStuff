@@ -4,27 +4,28 @@ import io
 import os
 import hashlib
 
-# --- 1. APP CONFIG ---
-st.set_page_config(page_title="Answerinator PRO", page_icon="🚀")
+# --- APP CONFIG ---
+st.set_page_config(
+    page_title="Answerinator PRO",
+    page_icon="icon.png",  # must match file name EXACTLY
+    layout="wide"
+)
 
-# --- 2. THE "ULTIMATE" ICON FORCE ---
+# --- STYLE ---
 st.markdown(
     """
-    <head>
-        <link rel="apple-touch-icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
-        <link rel="apple-touch-icon-precomposed" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
-        <link rel="shortcut icon" href="https://i.pinimg.com/originals/1c/4b/0b/1c4b0b07f185ae358ade34c326d60445.jpg">
-    </head>
     <style>
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
-        .stApp { margin-top: -70px; background-color: #0e1117; color: white; }
+        .stApp {
+            background-color: #0e1117;
+            color: white;
+        }
     </style>
-    """, 
+    """,
     unsafe_allow_html=True
 )
-
 
 # --- 3. SECURITY VAULT ---
 try:
