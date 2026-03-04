@@ -4,35 +4,6 @@ import io
 import os
 import hashlib
 
-# --- THE STATUS BAR & UI OVERRIDE ---
-st.markdown(
-    """
-    <head>
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    </head>
-    <style>
-        /* Force delete the Streamlit header and footer */
-        header {display: none !important;}
-        footer {display: none !important;}
-        .viewerBadge_container__1QSob {display: none !important;}
-
-        /* Move everything up to the very top edge */
-        .block-container {
-            padding-top: 0rem;
-            padding-bottom: 0rem;
-        }
-
-        /* Match the background so the top bar 'disappears' */
-        .stApp {
-            background-color: #0e1117;
-            color: white;
-            margin-top: -85px; 
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # --- 1. SECURITY VAULT ---
 try:
