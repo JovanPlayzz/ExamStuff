@@ -10,40 +10,45 @@ st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide
 st.markdown(
     """
     <style>
-        /* 1. TOP & BOTTOM FADE: Blends white bar at top, hides footer at bottom */
+        /* 1. TIGHT TOP & BOTTOM FADE: Blends white bar (5%) and hides footer (5%) */
         .stApp {
             background: linear-gradient(
                 to bottom, 
                 #FFFFFF 0%, 
-                #0e1117 10%, 
-                #0e1117 90%, 
+                #0e1117 5%, 
+                #0e1117 95%, 
                 #FFFFFF 100%
             ) !important;
         }
 
-        /* 2. DELETE BRANDING: Kills footer, crown, and header */
+        /* 2. HIDE BRANDING: Deletes footer and badge */
         footer {display: none !important; visibility: hidden !important;}
         #MainMenu {display: none !important;}
         header {display: none !important;}
         .viewerBadge_container__1QSob {display: none !important;}
         
-        /* 3. LAYOUT: Center everything and clear the fade zones */
+        /* 3. COMPACT LAYOUT: Minimal padding to keep it tight */
         .block-container {
-            padding-top: 5rem !important; 
-            padding-bottom: 5rem !important;
+            padding-top: 2.5rem !important; 
+            padding-bottom: 2.5rem !important;
         }
 
-        /* 4. TEXT & BUTTONS: Clean white text and pro blue buttons */
-        h1, h2, h3, p, span, label { color: white !important; }
+        /* 4. TEXT & INPUTS: Smaller fonts to save space */
+        h1 { font-size: 1.5rem !important; color: white !important; margin-bottom: 0.5rem !important; }
+        p, span, label { color: white !important; font-size: 0.9rem !important; }
+        
         .stButton>button {
             width: 100%;
-            border-radius: 12px;
-            height: 3.5em;
+            border-radius: 10px;
+            height: 2.8em;
             background-color: #007bff;
             color: white;
-            border: none;
             font-weight: bold;
+            font-size: 0.9rem;
         }
+
+        /* Shrink input spacing */
+        div[data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
     </style>
     """,
     unsafe_allow_html=True
@@ -70,32 +75,31 @@ st.title("🚀 Answerinator PRO")
 
 input_file = 'variables.xlsx'
 if os.path.exists(input_file):
-    col1, col2 = st.columns(2)
-    with col1: sec = st.selectbox("Section", ["Core", "Ryzen"])
-    with col2: 
+    # Condense Inputs into 3 columns
+    c1, c2, c3 = st.columns([1, 1, 1])
+    with c1: sec = st.selectbox("Sec", ["Core", "Ryzen"])
+    with c2: 
         s_num = st.number_input("ID", min_value=1, step=1, value=st.session_state.s_num)
         st.session_state.s_num = s_num
-
-    logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
+    with c3: logic = st.selectbox("Logic", ["Java", ".NET"])
     
-    st.divider()
     st.write(f"💸 **GCash:** `{GCASH}`")
     
-    user_key = st.text_input("Enter Key:", type="password").strip()
+    user_key = st.text_input("Key:", type="password").strip()
     
-    # Validation logic
     vk, dk = generate_key(s_num, SALT_VIEW), generate_key(s_num, SALT_DL)
     is_v = (user_key == vk) or (st.session_state.admin_mode in ["View", "Full"])
     is_d = (user_key == dk) or (st.session_state.admin_mode == "Full")
 
     if is_v or is_d:
+        # Mini results table area
         st.success("Access Granted")
-        # Your data processing table goes here...
+        # [Insert your processing code here]
 
-# --- 4. ADMIN ---
-with st.expander("🛠️ Admin"):
+# --- 4. ADMIN (Hidden in small expander) ---
+with st.expander("🛠️"):
     if st.text_input("Pass", type="password") == MASTER_PASS:
-        if st.button("Full Access"):
+        if st.button("Unlock"):
             st.session_state.admin_mode = "Full"
             st.rerun()
-        st.code(f"V: {vk} | D: {dk}")
+        st.code(f"V:{vk} | D:{dk}")
