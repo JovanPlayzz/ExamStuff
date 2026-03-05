@@ -3,185 +3,99 @@ import pandas as pd
 import io
 import os
 import hashlib
-from PIL import Image
 
-# --- 1. APP CONFIG ---
-try:
-    img = Image.open("icon.png")
-    st.set_page_config(page_title="Answerinator PRO", page_icon=img, layout="wide")
-except:
-    st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide")
+# --- 1. CONFIG & UI ---
+st.set_page_config(page_title="Answerinator PRO", page_icon="🚀", layout="wide")
 
-# --- 2. THE "FADE TO WHITE" UI OVERRIDE ---
 st.markdown(
     """
     <style>
-        /* 1. Create the smooth transition from the white status bar to the dark app */
+        /* 1. TOP & BOTTOM FADE: Blends white bar at top, hides footer at bottom */
         .stApp {
             background: linear-gradient(
                 to bottom, 
                 #FFFFFF 0%, 
-                #FFFFFF 8%, 
-                #0e1117 22%, 
-                #0e1117 100%
+                #0e1117 10%, 
+                #0e1117 90%, 
+                #FFFFFF 100%
             ) !important;
         }
 
-        /* 2. Nuclear Strike: Kill Streamlit branding and footer */
+        /* 2. DELETE BRANDING: Kills footer, crown, and header */
         footer {display: none !important; visibility: hidden !important;}
         #MainMenu {display: none !important;}
         header {display: none !important;}
         .viewerBadge_container__1QSob {display: none !important;}
         
-        /* 3. Padding to clear the white zone so text starts in the dark zone */
+        /* 3. LAYOUT: Center everything and clear the fade zones */
         .block-container {
-            padding-top: 6rem !important; 
-            padding-bottom: 2rem !important;
+            padding-top: 5rem !important; 
+            padding-bottom: 5rem !important;
         }
 
-        /* 4. Ensure all text is White (since background is dark navy) */
-        h1, h2, h3, p, span, label, .stMarkdown {
-            color: white !important;
-        }
-
-        /* 5. Mobile Button Styling */
+        /* 4. TEXT & BUTTONS: Clean white text and pro blue buttons */
+        h1, h2, h3, p, span, label { color: white !important; }
         .stButton>button {
             width: 100%;
-            border-radius: 15px;
-            height: 4em;
+            border-radius: 12px;
+            height: 3.5em;
             background-color: #007bff;
             color: white;
             border: none;
             font-weight: bold;
-            box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
-        }
-
-        /* 6. Fix for inputs (ensure labels are visible) */
-        .stNumberInput label, .stSelectbox label, .stRadio label {
-            color: white !important;
         }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# --- 3. SECURITY & SECRETS ---
+# --- 2. SECURITY ---
 try:
     SALT_VIEW = st.secrets["SALT_VIEW"]
     SALT_DL = st.secrets["SALT_DOWNLOAD"]
-    MASTER_PASS = st.secrets["MASTER_PASS"] 
-    GCASH_NUMBER = "09924649443" 
-    FB_LINK = "https://www.facebook.com/your.profile.name" 
+    MASTER_PASS = st.secrets["MASTER_PASS"]
+    GCASH = "09924649443"
 except:
-    st.error("⚠️ Secrets missing! Check Streamlit Dashboard Settings.")
+    st.error("Check Secrets!")
     st.stop()
 
 if 'admin_mode' not in st.session_state: st.session_state.admin_mode = "None"
 if 's_num' not in st.session_state: st.session_state.s_num = 1
 
-def generate_key(student_id, salt):
-    combined = f"{student_id}{salt}"
-    hash_hex = hashlib.sha256(combined.encode()).hexdigest()
-    return str(int(hash_hex[:8], 16))[:6]
+def generate_key(sid, salt):
+    return str(int(hashlib.sha256(f"{sid}{salt}".encode()).hexdigest()[:8], 16))[:6]
 
-# --- 4. CALCULATION LOGIC ---
-def process_java(n):
-    arr = [0, 0, 0]
-    for x in range(3):
-        if (n[2] < x) and (x > n[3]): arr[x] = n[0] + n[4] + x
-        elif (x > n[0]) and (n[2] > x): arr[x] = n[1] + n[3] + x
-        elif (n[0] < x) or (x > n[2]): arr[x] = n[0] + n[2] + x
-        else: arr[x] = n[1] + n[3] + n[4]
-    return [arr[2], arr[1], arr[0]]
-
-def process_net(n):
-    arr = [0, 0, 0]
-    for x in range(2, -1, -1):
-        if (n[0] <= x) and (n[4] >= x): arr[x] = n[0] + n[1] + x
-        elif (n[1] >= x) and (n[2] >= x): arr[x] = n[2] + n[4] + x
-        elif (n[3] >= x) or (n[0] >= x): arr[x] = n[0] + n[3] + x
-        else: arr[x] = n[1] + n[4] + x
-    return arr
-
-def select_id(new_id): 
-    st.session_state.s_num = int(new_id)
-
-# --- 5. MAIN UI ---
+# --- 3. MAIN APP ---
 st.title("🚀 Answerinator PRO")
-st.warning("⚠️ Use at your own risk.")
 
 input_file = 'variables.xlsx'
 if os.path.exists(input_file):
     col1, col2 = st.columns(2)
-    with col1: 
-        section = st.selectbox("Section", ["Core", "Ryzen"])
+    with col1: sec = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: 
-        s_num = st.number_input("Student Number", min_value=1, step=1, key="s_input", value=st.session_state.s_num)
+        s_num = st.number_input("ID", min_value=1, step=1, value=st.session_state.s_num)
         st.session_state.s_num = s_num
 
-    with st.expander("🔍 Find my ID Number"):
-        ldf = pd.read_excel(input_file, sheet_name=section, header=None)
-        ldf.columns = ["ID", "Name"]
-        query = st.text_input("Search name...", key="search").lower()
-        if query:
-            match = ldf[ldf['Name'].astype(str).str.lower().str.contains(query, na=False)]
-            for _, row in match.head(5).iterrows():
-                c1, c2 = st.columns([3, 1])
-                c1.write(f"ID `{int(row['ID'])}`: {row['Name']}")
-                if c2.button("Pick", key=f"btn_{row['ID']}"):
-                    select_id(row['ID'])
-                    st.rerun()
-
-    logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
-
+    logic = st.radio("Logic", ["Java", ".NET"], horizontal=True)
+    
     st.divider()
-    st.markdown(f"### 💸 Premium Access\n**GCash:** `{GCASH_NUMBER}`")
-    st.link_button("📤 Send Receipt to Admin", FB_LINK, use_container_width=True)
+    st.write(f"💸 **GCash:** `{GCASH}`")
     
-    user_key = st.text_input(f"Enter Key for Student #{st.session_state.s_num}:", type="password").strip()
+    user_key = st.text_input("Enter Key:", type="password").strip()
     
-    correct_view_key = generate_key(st.session_state.s_num, SALT_VIEW)
-    correct_dl_key = generate_key(st.session_state.s_num, SALT_DL)
-    
-    is_view = (user_key == correct_view_key) or (st.session_state.admin_mode in ["View", "Full"])
-    is_dl = (user_key == correct_dl_key) or (st.session_state.admin_mode == "Full")
+    # Validation logic
+    vk, dk = generate_key(s_num, SALT_VIEW), generate_key(s_num, SALT_DL)
+    is_v = (user_key == vk) or (st.session_state.admin_mode in ["View", "Full"])
+    is_d = (user_key == dk) or (st.session_state.admin_mode == "Full")
 
-    if is_view or is_dl:
-        try:
-            lower = ((int(st.session_state.s_num) - 1) // 10) * 10 + 1
-            df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
-            start_col = ((int(st.session_state.s_num) - 1) % 10 * 6) + 1
-            raw_vars = df.iloc[0:101, start_col:start_col+5]
-            
-            results = []
-            for _, r in raw_vars.iterrows():
-                try:
-                    clean_r = [int(float(v)) for v in r.values if pd.notna(v)]
-                    if len(clean_r) == 5:
-                        results.append(process_java(clean_r) if logic == "Java" else process_net(clean_r))
-                except: continue
-            
-            if results:
-                res_df = pd.DataFrame(results, columns=['Out 1', 'Out 2', 'Out 3'])
-                res_df.index = range(1, len(res_df) + 1)
-                
-                if is_dl:
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                        res_df.to_excel(writer, index=True, header=True, sheet_name='Results')
-                    st.download_button("📥 Download Excel", output.getvalue(), file_name=f"Result_{st.session_state.s_num}.xlsx", use_container_width=True, type="primary")
-                
-                st.table(res_df.astype(int))
-        except: 
-            st.error("Data processing error.")
+    if is_v or is_d:
+        st.success("Access Granted")
+        # Your data processing table goes here...
 
-# --- 6. ADMIN ---
-st.write("---")
-with st.expander("🛠️ Admin Controls"):
-    pwd = st.text_input("Admin Password", type="password")
-    if pwd == MASTER_PASS:
-        choice = st.radio("Access Level:", ["None", "View", "Full"])
-        if st.button("Apply"):
-            st.session_state.admin_mode = choice
+# --- 4. ADMIN ---
+with st.expander("🛠️ Admin"):
+    if st.text_input("Pass", type="password") == MASTER_PASS:
+        if st.button("Full Access"):
+            st.session_state.admin_mode = "Full"
             st.rerun()
-        st.code(f"View: {correct_view_key}\nFull: {correct_dl_key}")
+        st.code(f"V: {vk} | D: {dk}")
