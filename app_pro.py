@@ -4,36 +4,42 @@ import io
 import os
 import hashlib
 
-# --- 1. THE UI FIX (FADE TO WHITE) ---
+# --- 1. UI SETUP (FADE TO WHITE) ---
 st.set_page_config(page_title="Answerinator PRO", layout="centered")
 
 st.markdown(
     """
     <style>
-        /* 1. The smooth transition: White at top/bottom, dark navy for the app */
+        /* 1. The smooth transition: Only affects the background */
         .stApp {
             background: linear-gradient(
                 to bottom, 
                 #FFFFFF 0%, 
-                #0e1117 5%, 
-                #0e1117 95%, 
+                #0e1117 8%, 
+                #0e1117 92%, 
                 #FFFFFF 100%
             ) !important;
         }
 
-        /* 2. Kill the Streamlit branding elements */
+        /* 2. Remove Streamlit branding */
         footer {display: none !important; visibility: hidden !important;}
         header {display: none !important;}
         .viewerBadge_container__1QSob {display: none !important;}
         
-        /* 3. Spacing to clear the white zones */
+        /* 3. Spacing to clear the white zones without shrinking content */
         .block-container {
-            padding-top: 3rem !important; 
-            padding-bottom: 3rem !important;
+            padding-top: 5rem !important; 
+            padding-bottom: 5rem !important;
+            max-width: 100% !important;
         }
 
-        /* 4. Ensure all your text stays white against the dark background */
-        h1, h2, h3, p, span, label, div {
+        /* 4. Fix: Ensure text stays your original size but is white */
+        h1, h2, h3, p, span, label {
+            color: white !important;
+        }
+        
+        /* Keep the radio button text and other labels white */
+        .stWidgetLabel p {
             color: white !important;
         }
     </style>
@@ -52,7 +58,6 @@ except:
     st.error("Secrets missing in Dashboard!")
     st.stop()
 
-# Initialize Admin Mode in Session State so it persists
 if 'admin_mode' not in st.session_state:
     st.session_state.admin_mode = "None"
 
@@ -99,12 +104,10 @@ input_file = 'variables.xlsx'
 if not os.path.exists(input_file):
     st.error("❌ File 'variables.xlsx' not found!")
 else:
-    # --- INPUTS ---
     col1, col2 = st.columns(2)
     with col1: section = st.selectbox("Section", ["Core", "Ryzen"])
     with col2: s_num = st.number_input("Student Number", min_value=1, step=1, key="s_num")
 
-    # SEARCH
     with st.expander("🔍 Find my number"):
         ldf = pd.read_excel(input_file, sheet_name=section, header=None)
         ldf.columns = ["ID", "Name"]
@@ -116,7 +119,6 @@ else:
                 c1.write(f"`{int(row['ID'])}` {row['Name']}")
                 c2.button("Pick", key=f"sel_{row['ID']}", on_click=select_id, args=(row['ID'],), use_container_width=True)
 
-    # NAME DISPLAY
     try:
         names_df = pd.read_excel(input_file, sheet_name=section, header=None)
         student_match = names_df[pd.to_numeric(names_df[0], errors='coerce') == s_num]
@@ -127,14 +129,12 @@ else:
 
     logic = st.radio("Logic Mode", ["Java", ".NET"], horizontal=True)
 
-    # --- 5. ACCESS CONTROL ---
     st.divider()
     st.markdown(f"### 💸 Premium Access\n| Option | Price |\n| :--- | :--- |\n| **View Key** | ₱200 |\n| **Full Key** | ₱250 |\n\n**GCash:** `{GCASH_NUMBER}`", unsafe_allow_html=True)
     st.link_button("📤 Send Receipt to Facebook", FB_LINK, use_container_width=True)
     
     user_key = st.text_input(f"Enter Key for Student #{s_num}:", type="password").strip()
     
-    # GOD MODE CHECK
     correct_view_key = generate_key(s_num, SALT_VIEW)
     correct_dl_key = generate_key(s_num, SALT_DL)
     
@@ -142,9 +142,6 @@ else:
     is_dl = (user_key == correct_dl_key) or (st.session_state.admin_mode == "Full")
 
     if is_view or is_dl:
-        if st.session_state.admin_mode != "None":
-            st.warning(f"🛠️ ADMIN OVERRIDE: {st.session_state.admin_mode} Mode Active")
-        
         try:
             lower = ((int(s_num) - 1) // 10) * 10 + 1
             df = pd.read_excel(input_file, sheet_name=f"Student {lower} to {lower + 9}", header=None)
@@ -172,9 +169,7 @@ else:
                     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                         res_df.to_excel(writer, index=True, header=True, sheet_name='Results')
                     st.download_button("📥 Download Excel", output.getvalue(), file_name=f"Result_{s_num}.xlsx", use_container_width=True, type="primary")
-                else:
-                    st.button("📥 Download Excel (Locked)", disabled=True, use_container_width=True)
-
+                
                 st.table(res_df.astype(int))
                 
                 with st.expander("📚 View Variables Used"):
@@ -183,7 +178,7 @@ else:
                     st.dataframe(in_df, use_container_width=True)
         except: st.error("Data error.")
 
-# --- 6. ADMIN PANEL ---
+# --- 5. ADMIN PANEL ---
 st.write("---")
 with st.expander("🛠️ Admin Controls"):
     pwd = st.text_input("Admin Password", type="password", key="admin_pwd_input")
@@ -193,9 +188,4 @@ with st.expander("🛠️ Admin Controls"):
         if st.button("Apply Admin Mode"):
             st.session_state.admin_mode = choice
             st.rerun()
-        
-        st.divider()
-        st.write(f"**Customer Keys for Student #{s_num}:**")
         st.code(f"View: {correct_view_key}\nFull: {correct_dl_key}")
-    elif pwd != "":
-        st.error("Wrong Password")
