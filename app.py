@@ -5,53 +5,33 @@ import os
 
 # --- LOGIC FUNCTIONS ---
 def process_java(n):
-    # Mapping: n[0]=N1, n[1]=N2, n[2]=N3, n[3]=N4, n[4]=N5
+    # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
-    
     for x in range(3):
-        # 1. Start at the bottom diamond: (N3 < X) && (X > N4)
-        if (n[2] < x) and (x > n[3]):
+        if (n[2] < x) and (x > n[3]): 
             arr[x] = n[0] + n[4] + x
-            
-        # 2. Arrow points UP to the middle diamond: (X > N1) && (N3 > X)
-        elif (x > n[0]) and (n[2] > x):
+        elif (x > n[0]) and (n[2] > x): 
             arr[x] = n[1] + n[3] + x
-            
-        # 3. Arrow points UP to the top diamond: (N1 < X) || (X > N3)
-        elif (n[0] < x) or (x > n[2]):
+        elif (n[0] < x) or (x > n[2]): 
             arr[x] = n[0] + n[2] + x
-            
-        # 4. Final 'NO' path at the very top
-        else:
+        else: 
             arr[x] = n[1] + n[3] + n[4]
-            
-    # Display logic: Y starts at 2, goes down to 0 (ARR[2], ARR[1], ARR[0])
-    return [arr[2], arr[1], arr[0]]
+    return [arr[2], arr[1], arr[0]] # Flowchart displays backwards
+
 
 def process_net(n):
-    # n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
+    # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
-    
-    # WHILE x >= 0 (starting from 2)
     for x in range(2, -1, -1):
-        # IF ! (Num1 > x) && ! (Num5 < x)
-        if not (n[0] > x) and not (n[4] < x):
+        if (n[0] <= x) and (n[4] >= x): 
             arr[x] = n[0] + n[1] + x
-            
-        # ELSE IF ! (Num2 < x) && ! (Num3 < x)
-        elif not (n[1] < x) and not (n[2] < x):
+        elif (n[1] >= x) and (n[2] >= x): 
             arr[x] = n[2] + n[4] + x
-            
-        # ELSE IF ! (Num4 < x) || ! (Num1 < x)
-        elif not (n[3] < x) or not (n[0] < x):
+        elif (n[3] >= x) or (n[0] >= x): 
             arr[x] = n[0] + n[3] + x
-            
-        # ELSE
-        else:
+        else: 
             arr[x] = n[1] + n[4] + x
-            
-    # The pseudocode displays ARR[y] where y starts at 0 and goes to 2
-    return [arr[0], arr[1], arr[2]]
+    return [arr[0], arr[1], arr[2]] # Pseudocode displays forwards
 
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
