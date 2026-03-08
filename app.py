@@ -29,13 +29,29 @@ def process_java(n):
     return [arr[2], arr[1], arr[0]]
 
 def process_net(n):
+    # n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
+    
+    # WHILE x >= 0 (starting from 2)
     for x in range(2, -1, -1):
-        if (n[0] <= x) and (n[4] >= x): arr[x] = n[0] + n[1] + x
-        elif (n[1] >= x) and (n[2] >= x): arr[x] = n[2] + n[4] + x
-        elif (n[3] >= x) or (n[0] >= x): arr[x] = n[0] + n[3] + x
-        else: arr[x] = n[1] + n[4] + x
-    return arr
+        # IF ! (Num1 > x) && ! (Num5 < x)
+        if not (n[0] > x) and not (n[4] < x):
+            arr[x] = n[0] + n[1] + x
+            
+        # ELSE IF ! (Num2 < x) && ! (Num3 < x)
+        elif not (n[1] < x) and not (n[2] < x):
+            arr[x] = n[2] + n[4] + x
+            
+        # ELSE IF ! (Num4 < x) || ! (Num1 < x)
+        elif not (n[3] < x) or not (n[0] < x):
+            arr[x] = n[0] + n[3] + x
+            
+        # ELSE
+        else:
+            arr[x] = n[1] + n[4] + x
+            
+    # The pseudocode displays ARR[y] where y starts at 0 and goes to 2
+    return [arr[0], arr[1], arr[2]]
 
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
