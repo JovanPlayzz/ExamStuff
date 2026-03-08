@@ -5,12 +5,27 @@ import os
 
 # --- LOGIC FUNCTIONS ---
 def process_java(n):
+    # Mapping: n[0]=N1, n[1]=N2, n[2]=N3, n[3]=N4, n[4]=N5
     arr = [0, 0, 0]
+    
     for x in range(3):
-        if (n[2] < x) and (x > n[3]): arr[x] = n[0] + n[4] + x
-        elif (x > n[0]) and (n[2] > x): arr[x] = n[1] + n[3] + x
-        elif (n[0] < x) or (x > n[2]): arr[x] = n[0] + n[2] + x
-        else: arr[x] = n[1] + n[3] + n[4]
+        # 1. Start at the bottom diamond: (N3 < X) && (X > N4)
+        if (n[2] < x) and (x > n[3]):
+            arr[x] = n[0] + n[4] + x
+            
+        # 2. Arrow points UP to the middle diamond: (X > N1) && (N3 > X)
+        elif (x > n[0]) and (n[2] > x):
+            arr[x] = n[1] + n[3] + x
+            
+        # 3. Arrow points UP to the top diamond: (N1 < X) || (X > N3)
+        elif (n[0] < x) or (x > n[2]):
+            arr[x] = n[0] + n[2] + x
+            
+        # 4. Final 'NO' path at the very top
+        else:
+            arr[x] = n[1] + n[3] + n[4]
+            
+    # Display logic: Y starts at 2, goes down to 0 (ARR[2], ARR[1], ARR[0])
     return [arr[2], arr[1], arr[0]]
 
 def process_net(n):
