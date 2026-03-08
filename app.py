@@ -8,30 +8,36 @@ def process_java(n):
     # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
     for x in range(3):
-        if (n[2] < x) and (x > n[3]): 
-            arr[x] = n[0] + n[4] + x
-        elif (x > n[0]) and (n[2] > x): 
-            arr[x] = n[1] + n[3] + x
-        elif (n[0] < x) or (x > n[2]): 
-            arr[x] = n[0] + n[2] + x
-        else: 
-            arr[x] = n[1] + n[3] + n[4]
-    return [arr[2], arr[1], arr[0]] # Flowchart displays backwards
+        # CORRECTED: Top-Down standard flowchart logic
+        N1, N2, N3, N4, N5 = n[0], n[1], n[2], n[3], n[4]
+        
+        if (N3<x) and (x > N4):
+            arr[x] = N1 + N5 + x
+        elif (x > N1) and (N3 > x):
+            arr[x] = N2 + N4 + x
+        elif (N1 < x) or (x > N3):
+            arr[x] = N1 + N3 + x
+        else:                     
+            arr[x] = N2 + N4 + N5
+            
+    return [arr[2], arr[1], arr[0]] 
 
 
 def process_net(n):
     # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
     for x in range(2, -1, -1):
-        if (n[0] <= x) and (n[4] >= x): 
+        # CORRECTED: Literal translation instead of operator flipping
+        if (not (n[0] > x)) and (not (n[4] < x)): 
             arr[x] = n[0] + n[1] + x
-        elif (n[1] >= x) and (n[2] >= x): 
+        elif (not (n[1] < x)) and (not (n[2] < x)): 
             arr[x] = n[2] + n[4] + x
-        elif (n[3] >= x) or (n[0] >= x): 
+        elif (not (n[3] < x)) or (not (n[0] < x)): 
             arr[x] = n[0] + n[3] + x
         else: 
             arr[x] = n[1] + n[4] + x
-    return [arr[0], arr[1], arr[2]] # Pseudocode displays forwards
+            
+    return [arr[0], arr[1], arr[2]]
 
 def select_id(new_id):
     st.session_state.s_num = int(new_id)
