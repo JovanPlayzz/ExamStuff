@@ -1,27 +1,10 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import io
 import os
 
 # --- LOGIC FUNCTIONS ---
-# def process_java(n):
-#     # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
-#     arr = [0, 0, 0]
-#     for x in range(3):
-#         # CORRECTED: Top-Down standard flowchart logic
-#         N1, N2, N3, N4, N5 = n[0], n[1], n[2], n[3], n[4]
-        
-#         if (N3<x) and (x > N4):
-#             arr[x] = N1 + N5 + x
-#         elif (x > N1) and (N3 > x):
-#             arr[x] = N2 + N4 + x
-#         elif (N1 < x) or (x > N3):
-#             arr[x] = N1 + N3 + x
-#         else:                     
-#             arr[x] = N2 + N4 + N5
-            
-#     return [arr[2], arr[1], arr[0]] 
-
 def process_java(n):
     # Mapping: n[0]=Num1, n[1]=Num2, n[2]=Num3, n[3]=Num4, n[4]=Num5
     arr = [0, 0, 0]
@@ -130,22 +113,50 @@ else:
                 clean_logic = "Java" if logic == "Java" else "Net"
                 file_label = f"{s_num}: {student_name}-{clean_logic}.xlsx"
                 
+                # Prepare Excel Buffer
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                     pd.DataFrame(results).to_excel(writer, index=False, header=False, sheet_name='Results')
 
-                st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                # Prepare Data for Clipboard (Tab-separated)
+                final_df = pd.DataFrame(results)
+                tsv_data = final_df.to_csv(index=False, sep='\t', header=False).strip().replace('\n', '\\n').replace('\r', '')
+
+                # UI Buttons
+                btn_col1, btn_col2 = st.columns(2)
+                with btn_col1:
+                    st.download_button(label="📥 Download Excel", data=output.getvalue(), file_name=file_label, use_container_width=True, type="primary")
+                
+                with btn_col2:
+                    # JavaScript for Copy Button
+                    copy_js = f"""
+                        <button onclick="copyToClipboard()" style="
+                            width: 100%; height: 38px; background-color: #262730; color: white; 
+                            border: 1px solid rgba(250, 250, 250, 0.2); border-radius: 0.5rem; 
+                            cursor: pointer; font-family: inherit; font-size: 14px;
+                        ">📋 Copy to Clipboard</button>
+
+                        <script>
+                        function copyToClipboard() {{
+                            const text = `{tsv_data}`;
+                            navigator.clipboard.writeText(text.replace(/\\\\n/g, '\\n')).then(() => {{
+                                alert('Copied 100 rows! You can now paste into the Spreadsheet.');
+                            }});
+                        }}
+                        </script>
+                    """
+                    components.html(copy_js, height=50)
                 
                 # Answers Table (Integer only)
-                final_df = pd.DataFrame(results, columns=['Output 1', 'Output 2', 'Output 3']).astype(int)
-                final_df.index = final_df.index + 1
-                st.table(final_df)
+                display_df = final_df.copy()
+                display_df.columns = ['Output 1', 'Output 2', 'Output 3']
+                display_df.index = display_df.index + 1
+                st.table(display_df.astype(int))
 
                 # Variable List Button
                 st.divider()
                 if st.button("📋 List All Input Variables"):
                     with st.expander("Raw Variables Used", expanded=True):
-                        # Force all 5 columns to show clearly
                         var_df = pd.DataFrame(rows_list, columns=['V1', 'V2', 'V3', 'V4', 'V5']).astype(int)
                         var_df.index = var_df.index + 1
                         st.table(var_df)
